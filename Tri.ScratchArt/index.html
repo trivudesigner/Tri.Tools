@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="source/fav_SA.svg">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>Tri.ScratchArt</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --tri-background:#ffffff;
+    --tri-surface-1:#F5F3EF;
+    --tri-surface-2:#FFFFFF;
+    --tri-surface-3:#F0EDE7;
+    --tri-surface-4:#E4DFD6;
+    --tri-text-primary:#F59E0B;
+    --tri-text-secondary:#57534B;
+    --tri-text-tertiary:#8B867B;
+    --tri-primary:#D97706;
+    --tri-primary-hover:#B45F05;
+    --tri-primary-border:#F7CE8E;
+    --tri-danger:#C4392F;
+    --tri-danger-hover:#A82F27;
+    --tri-danger-muted:#FBEAE8;
+    --tri-radius-sm:6px;
+    --tri-radius-md:10px;
+    --tri-radius-lg:14px;
+    --tri-radius-full:999px;
+    --tri-space-2:8px; --tri-space-3:12px; --tri-space-4:16px; --tri-space-6:24px;
+    --tri-shadow-sm:0 1px 3px rgba(33,30,27,.09),0 1px 2px rgba(33,30,27,.06);
+    --tri-shadow-md:0 4px 6px rgba(33,30,27,.08),0 2px 4px rgba(33,30,27,.06);
+    --tri-shadow-lg:0 10px 22px rgba(33,30,27,.14),0 4px 8px rgba(33,30,27,.06);
+    --tri-transition-fast:120ms cubic-bezier(.4,0,.2,1);
+    --tri-transition-norm:200ms cubic-bezier(.4,0,.2,1);
+    --tri-font-sans:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;margin:0;overflow:hidden;}
+  body{font-family:var(--tri-font-sans);background:var(--tri-surface-1);}
+
+  .canvas-stack{
+    position:fixed; inset:0;
+    cursor:none; touch-action:none; user-select:none;
+    background:var(--tri-surface-3);
+  }
+  .canvas-stack canvas{ position:absolute; inset:0; width:100%; height:100%; display:block; }
+  #refLayer{
+    filter:grayscale(1) contrast(1.05) brightness(1.05);
+    opacity:0; mix-blend-mode:multiply;
+    transition:opacity var(--tri-transition-norm);
+    pointer-events:none;
+  }
+  #refLayer.visible{ opacity:.8; }
+
+  .brush-cursor{
+    position:fixed;
+    border:2px solid rgba(255,255,255,.9);
+    box-shadow:0 0 0 1px rgba(0,0,0,.35), var(--tri-shadow-sm);
+    border-radius:50%;
+    pointer-events:none;
+    transform:translate(-50%,-50%);
+    display:none;
+    z-index:5;
+  }
+  .brush-cursor.eraser{ border-style:dashed; }
+
+  .tri-toolbar{
+    position:fixed; left:50%; bottom:var(--tri-space-6);
+    transform:translateX(-50%);
+    display:flex; align-items:center; gap:6px;
+    background:var(--tri-surface-2);
+    border:1px solid var(--tri-surface-4);
+    border-radius:var(--tri-radius-full);
+    padding:6px;
+    box-shadow:var(--tri-shadow-lg);
+    z-index:20;
+    transition:opacity var(--tri-transition-norm), transform var(--tri-transition-norm);
+  }
+  .tri-toolbar.tri-hidden{
+    opacity:0;
+    transform:translateX(-50%) translateY(16px);
+    pointer-events:none;
+  }
+  .tri-divider{ width:1px; height:17px; background:var(--tri-surface-4); margin:0 1px; }
+
+  .tri-btn{
+    -webkit-appearance:none; appearance:none; border:none; cursor:pointer;
+    width:29px; height:29px;
+    display:inline-flex; align-items:center; justify-content:center;
+    color:var(--tri-text-secondary);
+    background:transparent;
+    border-radius:var(--tri-radius-full);
+    transition:background var(--tri-transition-fast), color var(--tri-transition-fast), box-shadow var(--tri-transition-fast), transform var(--tri-transition-fast);
+  }
+  .tri-btn:hover{ background:var(--tri-surface-3); color:var(--tri-text-primary); }
+  .tri-btn:active{ transform:scale(.94); }
+  .tri-btn:focus-visible{ outline:none; box-shadow:0 0 0 3px var(--tri-primary-border); }
+  .tri-btn svg{ width:13px; height:13px; }
+  .tri-btn.is-active{ background:var(--tri-primary); color:#fff; }
+  .tri-btn.is-active:hover{ background:var(--tri-primary-hover); color:#fff; }
+  .tri-btn.tri-save{ background:var(--tri-primary); color:#fff; }
+  .tri-btn.tri-save:hover{ background:var(--tri-primary-hover); }
+
+  .icon-swap svg{ display:none; }
+  .icon-swap svg.shown{ display:block; }
+
+  .tri-size{ display:flex; align-items:center; padding:0 6px; }
+  .tri-size input[type=range]{
+    -webkit-appearance:none; appearance:none;
+    width:50px; height:3px; border-radius:var(--tri-radius-full);
+    background:var(--tri-surface-4); outline:none;
+  }
+  .tri-size input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none; appearance:none;
+    width:11px; height:11px; border-radius:50%;
+    background:var(--tri-primary);
+    box-shadow:0 0 0 2px #fff, var(--tri-shadow-sm);
+    cursor:pointer;
+  }
+  .tri-size input[type=range]::-moz-range-thumb{
+    width:11px; height:11px; border-radius:50%; border:none;
+    background:var(--tri-primary); box-shadow:0 0 0 2px #fff, var(--tri-shadow-sm); cursor:pointer;
+  }
+
+  .tri-toolbar-toggle{
+    position:fixed; left:50%; bottom:6px; transform:translateX(-50%);
+	background:none;
+    border:none;
+    box-shadow:none;
+    width:22px; height:22px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    color:var(--tri-text-tertiary);
+    cursor:pointer;
+    z-index:25;
+    transition:background var(--tri-transition-fast), color var(--tri-transition-fast);
+  }
+  .tri-toolbar-toggle:hover{     
+	background:var(--tri-surface-2);
+    border:1px solid var(--tri-surface-4);
+    box-shadow:var(--tri-shadow-sm); 
+	}
+  .tri-toolbar-toggle svg{ width:14px; height:14px; }
+
+  .tri-headline {
+	position:absolute;
+	left:50%; 
+	transform:translate(-50%,10px);
+	z-index:300;
+	display: inline-flex;
+	align-items: center;
+  }
+
+  .tri-headline .name {
+	font-family: "Inter", sans-serif;
+	font-size: 24px;
+	font-weight: 800;
+	line-height: 1;
+	letter-spacing: -0.03em;
+	user-select: none;
+  }
+
+  .tri-headline .tri {
+	color: #64748B;
+  }
+
+  .tri-headline .dot {
+	color: var(--tri-text-primary);
+  }
+
+ .tri-headline .SA {
+	color: white;
+  }
+
+  .tri-modal-overlay{
+    position:fixed; inset:0; background:rgba(31,29,27,.45);
+    display:flex; align-items:center; justify-content:center;
+    z-index:100; opacity:0; pointer-events:none;
+    transition:opacity var(--tri-transition-norm);
+  }
+  .tri-modal-overlay.open{ opacity:1; pointer-events:auto; }
+  .tri-modal{
+    width:320px; background:var(--tri-surface-2);
+    border-radius:var(--tri-radius-lg);
+    box-shadow:var(--tri-shadow-lg);
+    padding:var(--tri-space-6);
+    transform:translateY(8px) scale(.98);
+    transition:transform var(--tri-transition-norm);
+  }
+  .tri-modal-overlay.open .tri-modal{ transform:translateY(0) scale(1); }
+  .tri-modal-icon{
+    width:38px; height:38px; border-radius:var(--tri-radius-md);
+    background:var(--tri-danger-muted); color:var(--tri-danger);
+    display:flex; align-items:center; justify-content:center;
+    margin-bottom:var(--tri-space-4);
+  }
+  .tri-modal h3{ margin:0 0 8px; font-size:15px; font-weight:700; color:var(--tri-text-primary); }
+  .tri-modal p{ margin:0 0 var(--tri-space-4); font-size:13px; color:var(--tri-text-secondary); line-height:1.5; }
+  .tri-modal-actions{ display:flex; justify-content:flex-end; gap:var(--tri-space-2); }
+  .tri-modal-actions button{
+    -webkit-appearance:none; border:none; cursor:pointer; font-family:inherit;
+    font-size:13px; font-weight:600; padding:var(--tri-space-2) var(--tri-space-4);
+    border-radius:var(--tri-radius-md); transition:background var(--tri-transition-fast);
+  }
+  .btn-cancel{ background:var(--tri-surface-3); color:var(--tri-text-secondary); }
+  .btn-cancel:hover{ background:var(--tri-surface-4); }
+  .btn-danger{ background:var(--tri-danger); color:#fff; }
+  .btn-danger:hover{ background:var(--tri-danger-hover); }
+
+  .tri-toast{
+    position:fixed; top:var(--tri-space-6); left:50%; transform:translate(-50%,-12px);
+    background:var(--tri-text-primary); color:#fff; font-size:13px; font-weight:600;
+    padding:var(--tri-space-2) var(--tri-space-4);
+    border-radius:var(--tri-radius-md);
+    box-shadow:var(--tri-shadow-md);
+    opacity:0; pointer-events:none;
+    transition:opacity var(--tri-transition-norm), transform var(--tri-transition-norm);
+    z-index:200;
+  }
+  .tri-toast.show{ opacity:1; transform:translate(-50%,0); }
+</style>
+</head>
+<body>
+
+<div class="tri-headline">
+    <span class="name bold">
+        <span class="tri">Tri</span><span class="dot">.</span><span class="SA">ScratchArt</span>
+    </span>
+</div>
+
+<div class="canvas-stack" id="canvasStack">
+  <canvas id="colorLayer"></canvas>
+  <canvas id="scratchLayer"></canvas>
+  <canvas id="refLayer"></canvas>
+  <div class="brush-cursor" id="brushCursor"></div>
+</div>
+
+<div class="tri-toolbar" role="toolbar" aria-label="Tools">
+  <button class="tri-btn is-active" id="brushBtn" title="Brush">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.06 11.9l8.07-8.06a2.85 2.85 0 1 1 4.03 4.03l-8.06 8.08"/><path d="M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02 1.08 1.1 2.49 2.02 4 2.02 2.2 0 4-1.8 4-4.04a3.01 3.01 0 0 0-3-3.02z"/></svg>
+  </button>
+  <button class="tri-btn" id="eraserBtn" title="Eraser">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21H8l-6.5-6.5a1 1 0 0 1 0-1.41l10-10a2 2 0 0 1 2.82 0l6.68 6.68a2 2 0 0 1 0 2.82L13 21"/><path d="M17.5 12.5 9.5 4.5"/></svg>
+  </button>
+
+  <div class="tri-size">
+    <input type="range" id="sizeSlider" min="1" max="10" value="3" title="Size">
+  </div>
+
+  <div class="tri-divider"></div>
+
+  <button class="tri-btn" id="imageBtn" title="Reference image">
+    <span class="icon-swap" id="imageIconWrap">
+      <svg class="shown" data-state="upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg>
+      <svg data-state="eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      <svg data-state="eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a17.4 17.4 0 0 1-3.22 4.4M6.61 6.61C3.35 8.5 1 12 1 12s4 8 11 8a9.3 9.3 0 0 0 5.39-1.61"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg>
+    </span>
+  </button>
+  <input type="file" id="fileInput" accept="image/*" hidden>
+
+  <div class="tri-divider"></div>
+
+  <button class="tri-btn" id="resetBtn" title="Reset">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+  </button>
+  <button class="tri-btn tri-save" id="saveBtn" title="Save PNG">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+  </button>
+</div>
+
+<button class="tri-toolbar-toggle" id="toolbarToggle" title="Hide toolbar">
+  <span class="icon-swap" id="toolbarToggleIconWrap">
+    <svg class="shown" data-state="down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+    <svg data-state="up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6"/></svg>
+  </span>
+</button>
+
+<div class="tri-modal-overlay" id="resetOverlay">
+  <div class="tri-modal">
+    <div class="tri-modal-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+    </div>
+    <h3>Reset the canvas?</h3>
+    <p>This restores the top layer and generates a fresh color base underneath. Your scratched progress will be lost.</p>
+    <div class="tri-modal-actions">
+      <button class="btn-cancel" id="cancelReset">Cancel</button>
+      <button class="btn-danger" id="confirmReset">Reset</button>
+    </div>
+  </div>
+</div>
+
+<div class="tri-toast" id="toast">Saved</div>
+
+<script>
+(() => {
+  const SCRATCH_COLOR = '#2B2823';
+  const stack = document.getElementById('canvasStack');
+  const colorCanvas = document.getElementById('colorLayer');
+  const scratchCanvas = document.getElementById('scratchLayer');
+  const refCanvas = document.getElementById('refLayer');
+  const cursor = document.getElementById('brushCursor');
+
+  const cctx = colorCanvas.getContext('2d');
+  const sctx = scratchCanvas.getContext('2d');
+  const rctx = refCanvas.getContext('2d');
+	
+  [cctx, sctx, rctx].forEach(ctx => {
+	ctx.imageSmoothingEnabled = true;
+	ctx.imageSmoothingQuality = 'high';
+  });
+  let W = 0, H = 0;
+  let refImg = null;
+
+  function sizeCanvases(){
+    W = Math.round(window.innerWidth);
+    H = Math.round(window.innerHeight);
+    [colorCanvas, scratchCanvas, refCanvas].forEach(c => { c.width = W; c.height = H; });
+  }
+
+  function paintColorLayer(){
+    cctx.clearRect(0,0,W,H);
+    const g = cctx.createLinearGradient(0,0,W,H);
+    const stops = ['#FF5C5C','#FF9F4A','#FFD93D','#6EE28C','#4AC7E0','#5C7CFA','#B26CE0','#FF5C5C'];
+    stops.forEach((c,i) => g.addColorStop(i/(stops.length-1), c));
+    cctx.fillStyle = g;
+    cctx.fillRect(0,0,W,H);
+    cctx.globalCompositeOperation = 'overlay';
+    const g2 = cctx.createLinearGradient(0,0,W,0);
+    for (let i=0;i<=1;i+=0.08){
+      g2.addColorStop(Math.min(i,1), i % 0.16 < 0.08 ? 'rgba(255,255,255,.18)' : 'rgba(255,255,255,0)');
+    }
+    cctx.fillStyle = g2;
+    cctx.fillRect(0,0,W,H);
+    cctx.globalCompositeOperation = 'source-over';
+  }
+
+  function paintScratchLayer(){
+    sctx.globalCompositeOperation = 'source-over';
+    sctx.clearRect(0,0,W,H);
+    sctx.fillStyle = SCRATCH_COLOR;
+    sctx.fillRect(0,0,W,H);
+  }
+
+  function paintRefImage(){
+    if (!refImg) return;
+    rctx.clearRect(0,0,W,H);
+    const scale = Math.max(W / refImg.width, H / refImg.height);
+    const dw = refImg.width * scale, dh = refImg.height * scale;
+    rctx.drawImage(refImg, (W-dw)/2, (H-dh)/2, dw, dh);
+  }
+
+  function rebuildAll(){
+    sizeCanvases();
+    paintColorLayer();
+    paintScratchLayer();
+    paintRefImage();
+    resizeCursor();
+  }
+
+  let tool = 'brush';
+  let brushSize = 1.5;
+  let eraserSize = 5;
+  let drawing = false;
+  let points = [];
+  let last = null;
+
+  const brushBtn = document.getElementById('brushBtn');
+  const eraserBtn = document.getElementById('eraserBtn');
+  const sizeSlider = document.getElementById('sizeSlider');
+
+  function currentSize(){ return tool === 'brush' ? brushSize : eraserSize; }
+
+  function refreshToolUI(){
+    brushBtn.classList.toggle('is-active', tool === 'brush');
+    eraserBtn.classList.toggle('is-active', tool === 'eraser');
+    sizeSlider.value = currentSize();
+    cursor.classList.toggle('eraser', tool === 'eraser');
+    resizeCursor();
+  }
+
+  brushBtn.addEventListener('click', () => { tool = 'brush'; refreshToolUI(); });
+  eraserBtn.addEventListener('click', () => { tool = 'eraser'; refreshToolUI(); });
+  sizeSlider.addEventListener('input', () => {
+    const v = parseInt(sizeSlider.value, 10);
+    if (tool === 'brush') brushSize = v; else eraserSize = v;
+    resizeCursor();
+  });
+
+  function strokeTo(x0, y0, x1, y1) {
+	  sctx.lineCap = 'round';
+	  sctx.lineJoin = 'round';
+	  sctx.lineWidth = currentSize();
+	  
+	  if (tool === 'brush') {
+		sctx.globalCompositeOperation = 'destination-out';
+		sctx.strokeStyle = 'rgba(0,0,0,1)';
+	  } else {
+		sctx.globalCompositeOperation = 'source-over';
+		sctx.strokeStyle = SCRATCH_COLOR;
+	  }
+	  
+	  sctx.beginPath();
+	  sctx.moveTo(x0, y0);
+	  sctx.lineTo(x1, y1);
+	  sctx.stroke();
+	}
+
+  function getMidPoint(p1, p2) {
+  return { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+}
+
+function setStrokeStyle() {
+  sctx.lineCap = 'round';
+  sctx.lineJoin = 'round';
+  sctx.lineWidth = currentSize();
+  if (tool === 'brush') {
+    sctx.globalCompositeOperation = 'destination-out';
+    sctx.strokeStyle = 'rgba(0,0,0,1)';
+  } else {
+    sctx.globalCompositeOperation = 'source-over';
+    sctx.strokeStyle = SCRATCH_COLOR;
+  }
+}
+
+function getPos(e){ return { x: e.clientX, y: e.clientY }; }
+
+stack.addEventListener('pointerdown', (e) => {
+  if (e.target.closest('.tri-toolbar')) return;
+  stack.setPointerCapture(e.pointerId);
+  drawing = true;
+  const p = getPos(e);
+  points = [p, p];
+
+  setStrokeStyle();
+  sctx.beginPath();
+  sctx.arc(p.x, p.y, currentSize() / 2, 0, Math.PI * 2);
+  sctx.fillStyle = sctx.strokeStyle;
+  sctx.fill();
+});
+
+stack.addEventListener('pointermove', (e) => {
+  const p = getPos(e);
+  cursor.style.left = p.x + 'px';
+  cursor.style.top = p.y + 'px';
+  if (!drawing) return;
+
+  points.push(p);
+
+  if (points.length > 3) points.shift();
+
+  if (points.length === 3) {
+    setStrokeStyle();
+    const [p0, p1, p2] = points;
+    const mid1 = getMidPoint(p0, p1);
+    const mid2 = getMidPoint(p1, p2);
+
+    sctx.beginPath();
+    sctx.moveTo(mid1.x, mid1.y);
+    sctx.quadraticCurveTo(p1.x, p1.y, mid2.x, mid2.y);
+    sctx.stroke();
+  }
+});
+
+function endStroke(){ drawing = false; points = []; }
+stack.addEventListener('pointerup', endStroke);
+stack.addEventListener('pointercancel', endStroke);
+stack.addEventListener('pointerenter', () => { cursor.style.display = 'block'; });
+stack.addEventListener('pointerleave', () => { cursor.style.display = 'none'; endStroke(); });
+
+  function resizeCursor(){
+    const s = currentSize();
+    cursor.style.width = s + 'px';
+    cursor.style.height = s + 'px';
+  }
+
+  const imageBtn = document.getElementById('imageBtn');
+  const fileInput = document.getElementById('fileInput');
+  const iconWrap = document.getElementById('imageIconWrap');
+  let hasRefImage = false;
+  let refVisible = false;
+
+  function setIcon(state){
+    iconWrap.querySelectorAll('svg').forEach(svg => svg.classList.toggle('shown', svg.dataset.state === state));
+  }
+
+  imageBtn.addEventListener('click', (e) => {
+    if (!hasRefImage || e.shiftKey) { fileInput.click(); return; }
+    refVisible = !refVisible;
+    refCanvas.classList.toggle('visible', refVisible);
+    setIcon(refVisible ? 'eye' : 'eye-off');
+  });
+
+  fileInput.addEventListener('change', () => {
+    const file = fileInput.files && fileInput.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        refImg = img;
+        paintRefImage();
+        hasRefImage = true;
+        refVisible = true;
+        refCanvas.classList.add('visible');
+        setIcon('eye');
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+    fileInput.value = '';
+  });
+
+  const toolbarEl = document.querySelector('.tri-toolbar');
+  const toolbarToggle = document.getElementById('toolbarToggle');
+  const toolbarToggleIconWrap = document.getElementById('toolbarToggleIconWrap');
+  let toolbarVisible = true;
+
+  toolbarToggle.addEventListener('click', () => {
+    toolbarVisible = !toolbarVisible;
+    toolbarEl.classList.toggle('tri-hidden', !toolbarVisible);
+    toolbarToggleIconWrap.querySelectorAll('svg').forEach(svg => {
+      svg.classList.toggle('shown', svg.dataset.state === (toolbarVisible ? 'down' : 'up'));
+    });
+    toolbarToggle.title = toolbarVisible ? 'Hide toolbar' : 'Show toolbar';
+  });
+
+  const resetBtn = document.getElementById('resetBtn');
+  const resetOverlay = document.getElementById('resetOverlay');
+  document.getElementById('cancelReset').addEventListener('click', () => resetOverlay.classList.remove('open'));
+  resetOverlay.addEventListener('click', (e) => { if (e.target === resetOverlay) resetOverlay.classList.remove('open'); });
+  resetBtn.addEventListener('click', () => resetOverlay.classList.add('open'));
+  document.getElementById('confirmReset').addEventListener('click', () => {
+    paintColorLayer();
+    paintScratchLayer();
+    resetOverlay.classList.remove('open');
+    showToast('Canvas reset');
+  });
+
+  document.getElementById('saveBtn').addEventListener('click', () => {
+    const out = document.createElement('canvas');
+    out.width = W; out.height = H;
+    const octx = out.getContext('2d');
+    octx.drawImage(colorCanvas, 0, 0);
+    octx.drawImage(scratchCanvas, 0, 0);
+    out.toBlob((blob) => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `scratch-art-${Date.now()}.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+      showToast('Saved as PNG');
+    }, 'image/png', 1.0);
+  });
+
+  const toast = document.getElementById('toast');
+  let toastTimer = null;
+  function showToast(msg){
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 1600);
+  }
+
+  rebuildAll();
+  refreshToolUI();
+
+  let resizeTimer = null;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(rebuildAll, 150);
+  });
+})();
+</script>
+
+</body>
+</html>
