@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tri.Markdown - Markdown Editor</title>
+<link rel="stylesheet" href="core.css">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.5/purify.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css" id="hljsTheme">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.1/mermaid.min.js"></script>
+
+<script>
+  window.MathJax = { tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$','$$'],['\\[','\\]']] }, options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] } };
+</script>
+<script id="mathjax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js" async></script>
+</head>
+<body>
+
+<div class="mdv-shell">
+
+  <!-- ===== Topbar (combined with tabbar) ===== -->
+  <header class="mdv-topbar">
+
+    <div class="mdv-tabbar mdv-autohide-scroll" id="tabbar"></div>
+
+    <div class="mdv-topbar-right">
+      <div class="tabs tabs-segmented mdv-icon-tabs mdv-desktop-only" id="viewToggle">
+        <button class="tab-segmented active" data-view="preview" title="View"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+        <button class="tab-segmented" data-view="edit" title="Edit"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></svg></button>
+      </div>
+
+      <div class="dropdown mdv-desktop-only" id="importDropdown">
+        <button class="tb-btn btn-icon" id="importTrigger" title="Open">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 7l1.5 8.5A2 2 0 0 0 6.47 17H19"/></svg>
+        </button>
+        <div class="dropdown-menu" style="right:0;left:auto;">
+          <div class="dropdown-item" id="importFileBtn">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <span>Local file</span>
+          </div>
+          <div class="dropdown-item" id="importUrlBtn">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            <span>From GitHub URL</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="dropdown mdv-desktop-only" id="exportDropdown">
+        <button class="tb-btn btn-icon" id="exportTrigger" title="Save (Ctrl+S) · Hold or right-click for more options">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        </button>
+        <div class="dropdown-menu" style="right:0;left:auto;">
+          <div class="dropdown-item" id="exportMdBtn"><span>Markdown (.md)</span></div>
+          <div class="dropdown-item" id="exportHtmlBtn"><span>HTML (standalone)</span></div>
+          <div class="dropdown-item" id="exportPdfBtn"><span>PDF document</span></div>
+          <div class="dropdown-divider"></div>
+          <div class="dropdown-item" id="copyHtmlBtn"><span>Copy rendered HTML</span></div>
+        </div>
+      </div>
+
+      <button class="tb-btn btn-icon mdv-desktop-only" id="themeToggleBtn" title="Toggle light/dark theme">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="themeIcon"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      </button>
+
+      <button class="tb-btn btn-icon mdv-compact-only" id="menuBtn" title="Menu">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ===== Editor / Preview split ===== -->
+  <main class="mdv-main" id="mainArea">
+    <aside class="mdv-toc-sidebar" id="tocSidebar">
+      <div class="mdv-toc-sidebar-header">On this page</div>
+      <div class="mdv-toc-sidebar-list mdv-autohide-scroll" id="tocSidebarList"></div>
+    </aside>
+
+    <section class="mdv-pane mdv-preview-pane" id="previewPane" style="flex:1 1 50%;">
+      <div class="mdv-preview-scroll mdv-autohide-scroll" id="previewScroll">
+        <div class="post-content mdv-preview" id="preview"></div>
+      </div>
+    </section>
+
+    <div class="mdv-resizer" id="resizer"></div>
+
+    <section class="mdv-pane mdv-editor-pane mdv-pane-hidden" id="editorPane" style="flex:1 1 50%;">
+	  <div class="mdv-editor-body" id="editorBody">
+		<!-- Formatting toolbar lives only inside the editor pane -->
+		<div class="format-toolbar mdv-toolbar mdv-autohide-scroll" id="toolbar">
+          <button class="fmt-btn" data-cmd="bold" title="Bold (Ctrl+B)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h8a4 4 0 0 1 0 8H6zM6 12h9a4 4 0 0 1 0 8H6z"/></svg></button>
+          <button class="fmt-btn" data-cmd="italic" title="Italic (Ctrl+I)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="4" x2="10" y2="4"/><line x1="14" y1="20" x2="5" y2="20"/><line x1="15" y1="4" x2="9" y2="20"/></svg></button>
+          <button class="fmt-btn" data-cmd="strike" title="Strikethrough"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4H9a3 3 0 0 0-2.83 4"/><path d="M14 12a4 4 0 0 1 0 8H6"/><line x1="4" y1="12" x2="20" y2="12"/></svg></button>
+          <div class="fmt-divider"></div>
+		  <button class="fmt-btn fmt-heading-btn" data-heading="1" title="Heading 1">H1</button>
+		  	<button class="fmt-btn fmt-heading-btn" data-heading="2" title="Heading 2">H2</button>
+		  	<button class="fmt-btn fmt-heading-btn" data-heading="3" title="Heading 3">H3</button>
+		  	<button class="fmt-btn fmt-heading-btn" data-heading="4" title="Heading 4">H4</button>
+		  	<button class="fmt-btn fmt-heading-btn" data-heading="0" title="Paragraph">P</button>
+		  <div class="fmt-divider"></div>
+          <button class="fmt-btn" data-cmd="ul" title="List"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg></button>
+          <button class="fmt-btn" data-cmd="ol" title="Numbered list"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="10" y1="6" x2="20" y2="6"/><line x1="10" y1="12" x2="20" y2="12"/><line x1="10" y1="18" x2="20" y2="18"/><path d="M4 6h1v4"/><path d="M4 10h2"/><path d="M4 18h2l-2-3h2"/></svg></button>
+          <button class="fmt-btn" data-cmd="task" title="Task list"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><polyline points="8 12 11 15 16 9"/></svg></button>
+          <button class="fmt-btn" data-cmd="quote" title="Quote"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 8a3 3 0 0 0-3 3v2a1 1 0 0 0 1 1h3v3l-2 2"/><path d="M17 8a3 3 0 0 0-3 3v2a1 1 0 0 0 1 1h3v3l-2 2"/></svg></button>
+          <div class="fmt-divider"></div>
+          <button class="fmt-btn" data-cmd="link" title="Link"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></button>
+          <button class="fmt-btn" data-cmd="image" title="Image"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></button>
+          <button class="fmt-btn" data-cmd="table" title="Table"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="12" y1="3" x2="12" y2="21"/></svg></button>
+          <button class="fmt-btn" data-cmd="code" title="Code"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></button>
+          <button class="fmt-btn" data-cmd="codeblock" title="Code block"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><polyline points="9 9 7 12 9 15"/><polyline points="15 9 17 12 15 15"/></svg></button>
+          <button class="fmt-btn" data-cmd="math" title="LaTeX math"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h4l2 16 2-16h8"/><path d="M17 4l3 3-3 3"/></svg></button>
+          <button class="fmt-btn" data-cmd="mermaid" title="Mermaid diagram"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><path d="M9 6.5H14a3 3 0 0 1 3 3V14"/></svg></button>
+          <button class="fmt-btn" data-cmd="hr" title="Horizontal rule"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="12" x2="20" y2="12"/></svg></button>
+          <button class="fmt-btn" data-cmd="callout" title="GitHub callout"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></button>
+          <div class="fmt-divider"></div>
+          <button class="fmt-btn" data-cmd="sentenceCase" title="Sentence case">Aa</button>
+          <button class="fmt-btn" data-cmd="upperCase" title="UPPER CASE">Aa</button>
+          <button class="fmt-btn" data-cmd="lowerCase" title="lower case">aa</button>
+          <div class="fmt-divider"></div>
+          <button class="fmt-btn" data-cmd="dateTime" title="Date / time"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><polyline points="9 15 11 17 15 13"/></svg></button>
+          <button class="fmt-btn" data-cmd="emoji" title="Emoji"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 3 4 3 4-3 4-3"/><circle cx="9" cy="9" r="1.5"/><circle cx="15" cy="9" r="1.5"/></svg></button>
+          <button class="fmt-btn" data-cmd="symbol" title="Symbol"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M15 9a4 4 0 1 0 0 6"/></svg></button>
+          <div class="mdv-toolbar-spacer"></div>
+        </div>
+        <div class="mdv-insert-popup" id="insertPopup">
+		  <div class="mdv-insert-popup-header" id="insertPopupTitle">Emoji</div>
+		  <div class="mdv-insert-popup-grid" id="insertPopupGrid"></div>
+		</div>
+
+		<div class="mdv-editor-scroll mdv-autohide-scroll" id="editorScroll">
+		  <div class="mdv-editor-inner">
+			<div class="mdv-gutter" id="gutter">1</div>
+			<div class="mdv-editor-wrap">
+			  <div class="mdv-editor-block-layer" id="editorBlockLayer" aria-hidden="true"></div>
+			  <div class="mdv-editor-highlight-layer" id="editorHighlightLayer" aria-hidden="true"></div>
+			  <textarea class="mdv-editor" id="editor" placeholder="Write Markdown here…" spellcheck="false"></textarea>
+			</div>
+		  </div>
+		</div>
+
+      <footer class="mdv-statusbar">
+		<div class="mdv-statusbar-left">
+		  <button class="fmt-btn" id="findBtn" title="Find & Replace (Ctrl+F)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
+		  <button class="fmt-btn" id="syncScrollBtn" title="Sync scroll"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></button>
+		  <button class="fmt-btn" id="toggleGutterBtn" title="Toggle line numbers">
+			<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+			  <line x1="4" y1="6" x2="4" y2="18"/><line x1="9" y1="8" x2="20" y2="8"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="16" x2="20" y2="16"/>
+			</svg>
+		  </button>
+		  <span class="sep">|</span>
+		  <span>Lines <span class="hl" id="lineInfo">1</span></span>
+		  <span class="sep">|</span>
+		  <span>Words <span class="hl" id="wordCount">0</span></span>
+		  <span class="sep">|</span>
+		  <span>Chars <span class="hl" id="charCount">0</span></span>
+		  <span class="sep">|</span>
+		  <span>Read <span class="hl" id="readTime">~0 min</span></span>
+		  <span id="statusMsg"></span>
+		</div>
+	  </footer>
+	</section>
+  </main>
+
+  <div class="mdv-findbar" id="findBar">
+    <div class="mdv-findbar-row">
+      <input class="input input-sm" id="findInput" placeholder="Find…">
+      <span class="mdv-findbar-count" id="findCount">0/0</span>
+      <button class="fmt-btn" id="findPrev" title="Previous"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="18 15 12 9 6 15"/></svg></button>
+      <button class="fmt-btn" id="findNext" title="Next"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="6 9 12 15 18 9"/></svg></button>
+      <button class="fmt-btn" id="findClose" title="Close"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="mdv-findbar-row" id="replaceRow">
+      <input class="input input-sm" id="replaceInput" placeholder="Replace…">
+      <button class="btn btn-sm btn-secondary" id="replaceOneBtn">Replace</button>
+      <button class="btn btn-sm btn-secondary" id="replaceAllBtn">All</button>
+    </div>
+    <div class="mdv-findbar-row mdv-findbar-opts" id="findOptsRow">
+      <button class="fmt-btn" id="optCase" title="Case sensitive">Aa</button>
+      <button class="fmt-btn" id="optWord" title="Whole word">W</button>
+      <button class="fmt-btn" id="optRegex" title="Regex">.*</button>
+    </div>
+  </div>
+</div>
+
+<!-- Compact Drawer (mobile / tablet) -->
+<div class="mdv-drawer-overlay" id="drawerOverlay"></div>
+<div class="mdv-drawer" id="drawer">
+  <div class="mdv-drawer-header">
+    <span>Menu</span>
+    <div class="modal-close" id="drawerClose"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+  </div>
+  <div class="mdv-drawer-icons">
+    <button class="mdv-drawer-icon-btn" data-drawer-view="preview" title="View"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg><span>View</span></button>
+    <button class="mdv-drawer-icon-btn" data-drawer-view="edit" title="Edit"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></svg><span>Edit</span></button>
+    <button class="mdv-drawer-icon-btn mdv-mobile-only" id="drawerRenameBtn" title="Rename"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h1a2 2 0 0 1 2 2v0a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v0a2 2 0 0 1 2-2h1"/><path d="M5 20h1a2 2 0 0 0 2-2v0a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v0a2 2 0 0 0 2 2h1"/><line x1="12" y1="7" x2="12" y2="17"/></svg><span>Rename</span></button>
+    <button class="mdv-drawer-icon-btn" id="drawerOpenBtn" title="Open"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 7l1.5 8.5A2 2 0 0 0 6.47 17H19"/></svg><span>Open</span></button>
+    <button class="mdv-drawer-icon-btn" id="drawerSaveBtn" title="Save"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg><span>Save</span></button>
+    <button class="mdv-drawer-icon-btn" id="drawerThemeBtn" title="Theme"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="drawerThemeIcon"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><span id="drawerThemeLabel">Theme</span></button>
+  </div>
+  <div class="mdv-drawer-toc-header">On this page</div>
+  <div class="mdv-drawer-toc-list mdv-autohide-scroll" id="drawerTocList"></div>
+</div>
+
+<!-- Hidden file input for import -->
+<input type="file" id="fileInput" accept=".md,.markdown,.txt" style="display:none">
+
+<!-- Drag & drop overlay -->
+<div class="mdv-dropzone-overlay" id="dropOverlay">
+  <div class="mdv-dropzone-box">
+    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="margin-bottom:12px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    <div style="font-weight:600;font-size:15px;color:var(--tri-text-primary);margin-bottom:4px;">Drop Markdown files here</div>
+    <div style="font-size:13px;">Supports .md, .markdown, .txt</div>
+  </div>
+</div>
+
+<!-- URL import modal -->
+<div class="modal-overlay" id="urlModalOverlay">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <div class="modal-title">Import from URL</div>
+      <div class="modal-close" id="urlModalClose"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+    </div>
+    <div class="modal-body">
+      <label style="font-size:13px;font-weight:500;display:block;margin-bottom:6px;">File URL (raw GitHub, ...)</label>
+      <input class="input" id="urlInput" placeholder="https://raw.githubusercontent.com/...">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" id="urlCancelBtn">Cancel</button>
+      <button class="btn btn-primary" id="urlLoadBtn">Import</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
