@@ -21,7 +21,6 @@
         if (data.tabs && data.tabs.length) {
           tabs = data.tabs;
           activeId = data.activeId || tabs[0].id;
-          // ensure 'Tri.Markdown' cheat-sheet tab exists
           if (!tabs.some(t => t.name === 'Tri.Markdown')) {
             tabs.unshift(newTab('Tri.Markdown', SAMPLE_MD));
             activeId = tabs[0].id;
@@ -29,7 +28,7 @@
           return;
         }
       }
-    } catch (e) { /* ignore */ }
+    } catch (e) { }
     const t = newTab('Tri.Markdown', SAMPLE_MD);
     tabs = [t];
     activeId = t.id;
@@ -38,7 +37,7 @@
   function saveTabs() {
     try {
       localStorage.setItem(LS_KEY, JSON.stringify({ tabs, activeId }));
-    } catch (e) { /* storage full or unavailable */ }
+    } catch (e) {  }
   }
 
   function getActiveTab() { return tabs.find(t => t.id === activeId); }
@@ -325,7 +324,7 @@ A bonus quick-reference for regular expressions, useful with this editor's Find 
 | \`\\w\` | Word char |
 | \`\\s\` | Whitespace |
 | \`[abc]\` | Character class |
-| \`(a\|b)\` | Alternation |
+| \`(a\\|b)\` | Alternation |
 | \`{n,m}\` | Range quantifier |
 `;
 
@@ -353,10 +352,9 @@ A bonus quick-reference for regular expressions, useful with this editor's Find 
     } catch (e) { highlighted = escapeHtml(code); }
     return `<pre><button class="fmt-btn mdv-code-copy" data-copy title="Copy"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button><code class="hljs${langClass}">${highlighted}</code></pre>`;
   };
-  renderer.checkbox = () => ''; // suppress marked's own <input type="checkbox">; we render a custom SVG below
+  renderer.checkbox = () => ''; 
   renderer.listitem = (text, task, checked) => {
     if (task) {
-      // strip marked's rendered checkbox input (and any literal "[ ]"/"[x]") so only our SVG remains
       const clean = text.replace(/<input[^>]*>\s*/i, '').replace(/^\[[ xX]\]\s*/, '').trim();
       const check = checked
         ? '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="4" fill="var(--tri-accent, #2563EB)"/><path d="M7 13l3 3 7-7" stroke="var(--tri-text-inverse, #fff)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>'
@@ -558,10 +556,14 @@ A bonus quick-reference for regular expressions, useful with this editor's Find 
 	}
 
   function clearBlockHighlight() {
-    const layer = document.getElementById('editorBlockLayer');
-    if (layer) layer.innerHTML = escapeHtml(editor.value);
-    preview.querySelectorAll('.mdv-block.mdv-block-active').forEach(el => el.classList.remove('mdv-block-active'));
-  }
+	  const layer = document.getElementById('editorBlockLayer');
+	  if (layer) {
+		layer.innerHTML = escapeHtml(editor.value);
+		layer.scrollTop = editor.scrollTop;   // thêm dòng này — fix lệch vị trí lần đầu mở file
+		layer.scrollLeft = editor.scrollLeft;
+	  }
+	  preview.querySelectorAll('.mdv-block.mdv-block-active').forEach(el => el.classList.remove('mdv-block-active'));
+	}
 
   function updateActiveBlockHighlight() {
     const layer = document.getElementById('editorBlockLayer');
@@ -585,6 +587,7 @@ A bonus quick-reference for regular expressions, useful with this editor's Find 
       '<div class="mdv-block-band">' + escapeHtml(blockText) + '</div>' +
       escapeHtml(afterStr);
     layer.scrollTop = editor.scrollTop;
+    layer.scrollLeft = editor.scrollLeft;
 
     preview.querySelectorAll('.mdv-block.mdv-block-active').forEach(el => el.classList.remove('mdv-block-active'));
     const idx = mdvBlocks.indexOf(block);
@@ -623,7 +626,6 @@ A bonus quick-reference for regular expressions, useful with this editor's Find 
     preview.innerHTML = html;
     buildToc();
 
-    // Open external links in a new tab (leave in-page anchors like #heading / #fn-1 alone)
     preview.querySelectorAll('a[href]').forEach(a => {
       const href = a.getAttribute('href') || '';
       if (!href.startsWith('#')) {
@@ -632,7 +634,6 @@ A bonus quick-reference for regular expressions, useful with this editor's Find 
       }
     });
 
-    // Re-apply the preview search highlight if Find is open in view mode
     if (findBar.classList.contains('open') && findBar.classList.contains('mdv-find-only') && findInput.value) {
       previewMatchIdx = -1;
       highlightPreviewMatches(findInput.value);
@@ -705,6 +706,13 @@ A bonus quick-reference for regular expressions, useful with this editor's Find 
     activeId = id;
     const t = getActiveTab();
     editor.value = t.content;
+	editor.scrollTop = 0;
+	editor.scrollLeft = 0;
+	gutter.scrollTop = 0;
+	const hl = document.getElementById('editorHighlightLayer');
+	if (hl) { hl.scrollTop = 0; hl.scrollLeft = 0; }
+	const bl = document.getElementById('editorBlockLayer');
+	if (bl) { bl.scrollTop = 0; bl.scrollLeft = 0; }
     editor.readOnly = t.name === 'Tri.Markdown';
     renderTabbar();
     render();
@@ -718,6 +726,13 @@ A bonus quick-reference for regular expressions, useful with this editor's Find 
 	  tabs.push(t);
 	  activeId = t.id;
 	  editor.value = '';
+	  editor.scrollTop = 0;
+	  editor.scrollLeft = 0;
+	  gutter.scrollTop = 0;
+	  const hl = document.getElementById('editorHighlightLayer');
+	  if (hl) { hl.scrollTop = 0; hl.scrollLeft = 0; }
+	  const bl = document.getElementById('editorBlockLayer');
+	  if (bl) { bl.scrollTop = 0; bl.scrollLeft = 0; }
 	  editor.readOnly = false;
 	  setViewMode('edit');
 	  renderTabbar();
@@ -766,25 +781,56 @@ A bonus quick-reference for regular expressions, useful with this editor's Find 
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => { render(); saveTabs(); const tt = getActiveTab(); if (tt) tt.dirty = false; renderTabbar(); }, 220);
   });
-  editor.addEventListener('scroll', () => {
+  let isSyncingScroll = false;
+	editor.addEventListener('scroll', () => {
 	  const top = editor.scrollTop;
+	  const left = editor.scrollLeft;
 	  gutter.scrollTop = top;
 	  const hl = document.getElementById('editorHighlightLayer');
-	  if (hl) hl.scrollTop = top;
+	  if (hl) { hl.scrollTop = top; hl.scrollLeft = left; }
 	  const bl = document.getElementById('editorBlockLayer');
-	  if (bl) bl.scrollTop = top;
-	  if (syncScrollOn) syncPreviewScroll();
+	  if (bl) { bl.scrollTop = top; bl.scrollLeft = left; }
+	  if (syncScrollOn && !isSyncingScroll) {
+		isSyncingScroll = true;
+		syncPreviewScroll();
+		requestAnimationFrame(() => { isSyncingScroll = false; });
+	  }
 	});
   editor.addEventListener('keyup', () => { updateActiveBlockHighlight(); });
   editor.addEventListener('click', () => { updateActiveBlockHighlight(); });
 
-  function updateGutter() {
-    const lines = editor.value.split('\n').length;
-    let out = '';
-    for (let i = 1; i <= lines; i++) out += i + '\n';
-    gutter.textContent = out;
-  }
+	function getWrappedRowCounts(text, refEl) {
+	  const lines = text.split('\n');
+	  const cs = getComputedStyle(refEl);
+	  const lineHeight = parseFloat(cs.lineHeight) || 21;
+	  const probe = document.createElement('div');
+	  probe.style.cssText = `position:absolute; visibility:hidden; left:-99999px; top:0; width:${refEl.clientWidth}px; box-sizing:border-box; padding-left:${cs.paddingLeft}; padding-right:${cs.paddingRight}; font-family:${cs.fontFamily}; font-size:${cs.fontSize}; line-height:${cs.lineHeight}; white-space:pre-wrap; word-wrap:break-word; overflow-wrap:break-word; tab-size:${cs.tabSize};`;
+	  lines.forEach(line => {
+		const d = document.createElement('div');
+		d.textContent = line.length ? line : ' ';
+		probe.appendChild(d);
+	  });
+	  document.body.appendChild(probe);
+	  const counts = Array.from(probe.children).map(d => Math.max(1, Math.round(d.getBoundingClientRect().height / lineHeight)));
+	  document.body.removeChild(probe);
+	  return counts;
+	}
 
+  function updateGutter() {
+  const text = editor.value;
+  const lines = text.split('\n');
+  let out = '';
+  if (wrapOn) {
+    const counts = getWrappedRowCounts(text, editor);
+    lines.forEach((_, i) => {
+      out += (i + 1) + '\n';
+      for (let r = 1; r < counts[i]; r++) out += '\n';
+    });
+  } else {
+    for (let i = 1; i <= lines.length; i++) out += i + '\n';
+  }
+  gutter.textContent = out;
+}
   function updateLineInfo() {
 	const lines = editor.value.split('\n').length;
 	lineInfo.textContent = lines;
@@ -985,11 +1031,9 @@ A bonus quick-reference for regular expressions, useful with this editor's Find 
     const lineHeight = parseInt(getComputedStyle(editor).lineHeight) || 21;
     const paddingTop = parseFloat(getComputedStyle(editor).paddingTop) || 0;
 
-    // Dòng đang nằm ở mốc 30% chiều cao khung editor
     const topLine = (editor.scrollTop - paddingTop) / lineHeight + 1;
     const anchorLine = Math.max(1, topLine + (editor.clientHeight / lineHeight) * SYNC_ANCHOR_RATIO);
 
-    // Tìm block có headline (startLine) gần nhất, nhỏ hơn hoặc bằng anchorLine
     let idx = 0;
     for (let i = 0; i < mdvBlocks.length; i++) {
       if (mdvBlocks[i].startLine <= anchorLine) idx = i; else break;
@@ -1002,16 +1046,75 @@ A bonus quick-reference for regular expressions, useful with this editor's Find 
       return;
     }
 
-    // Neo headline của block đó tại đúng mốc 30% chiều cao khung preview
     previewScroll.scrollTop = Math.max(0, Math.min(
       target.offsetTop - previewScroll.clientHeight * SYNC_ANCHOR_RATIO,
       previewScroll.scrollHeight - previewScroll.clientHeight
     ));
   };
+  
+  function syncEditorScroll() {
+	  if (!mdvBlocks || !mdvBlocks.length) {
+		const ratio = previewScroll.scrollTop / Math.max(1, (previewScroll.scrollHeight - previewScroll.clientHeight));
+		editor.scrollTop = ratio * (editor.scrollHeight - editor.clientHeight);
+		return;
+	  }
+
+	  const atTop = previewScroll.scrollTop <= 0;
+	  const atBottom = previewScroll.scrollTop + previewScroll.clientHeight >= previewScroll.scrollHeight - 2;
+	  if (atTop) { editor.scrollTop = 0; return; }
+	  if (atBottom) { editor.scrollTop = editor.scrollHeight - editor.clientHeight; return; }
+
+	  const anchorY = previewScroll.scrollTop + previewScroll.clientHeight * SYNC_ANCHOR_RATIO;
+
+	  let idx = 0;
+	  const blockEls = preview.querySelectorAll('.mdv-block');
+	  for (let i = 0; i < blockEls.length; i++) {
+		if (blockEls[i].offsetTop <= anchorY) idx = i; else break;
+	  }
+
+	  const block = mdvBlocks[idx];
+	  if (!block) {
+		const ratio = previewScroll.scrollTop / Math.max(1, (previewScroll.scrollHeight - previewScroll.clientHeight));
+		editor.scrollTop = ratio * (editor.scrollHeight - editor.clientHeight);
+		return;
+	  }
+
+	  const lineHeight = parseInt(getComputedStyle(editor).lineHeight) || 21;
+	  const paddingTop = parseFloat(getComputedStyle(editor).paddingTop) || 0;
+
+	  editor.scrollTop = Math.max(0, Math.min(
+		paddingTop + (block.startLine - 1) * lineHeight - editor.clientHeight * SYNC_ANCHOR_RATIO,
+		editor.scrollHeight - editor.clientHeight
+	  ));
+	}
+	previewScroll.addEventListener('scroll', () => {
+	  if (syncScrollOn && !isSyncingScroll) {
+		isSyncingScroll = true;
+		syncEditorScroll();
+		requestAnimationFrame(() => { isSyncingScroll = false; });
+	  }
+	});
 
   /* ================= Resizer ================= */
   const resizer = document.getElementById('resizer');
   const editorPane = document.getElementById('editorPane');
+	let wrapOn = false; 
+	document.getElementById('toggleWrapBtn').addEventListener('click', (e) => {
+	  wrapOn = !wrapOn;
+	  editorPane.classList.toggle('mdv-wrap-on', wrapOn);
+	  e.currentTarget.classList.toggle('active', wrapOn);
+
+	  editor.scrollTop = 0;
+	  editor.scrollLeft = 0;
+	  gutter.scrollTop = 0;
+	  const hl = document.getElementById('editorHighlightLayer');
+	  if (hl) { hl.scrollTop = 0; hl.scrollLeft = 0; }
+	  const bl = document.getElementById('editorBlockLayer');
+	  if (bl) { bl.scrollTop = 0; bl.scrollLeft = 0; }
+
+	  updateGutter();
+	  updateActiveBlockHighlight();
+	});
   const previewPane = document.getElementById('previewPane');
   let dragging = false;
   resizer.addEventListener('mousedown', () => { dragging = true; resizer.classList.add('dragging'); document.body.style.userSelect = 'none'; });
@@ -1020,7 +1123,6 @@ A bonus quick-reference for regular expressions, useful with this editor's Find 
     const rect = document.getElementById('mainArea').getBoundingClientRect();
     let pct = ((e.clientX - rect.left) / rect.width) * 100;
     pct = Math.min(80, Math.max(20, pct));
-    // preview pane sits on the left, editor pane on the right
     previewPane.style.flex = `0 0 ${pct}%`;
     editorPane.style.flex = `1 1 ${100 - pct}%`;
   });
@@ -1245,8 +1347,10 @@ A bonus quick-reference for regular expressions, useful with this editor's Find 
   const targetTop = Math.max(0, (linesBefore - Math.floor(visibleLines / 2)) * lineHeight);
   editor.scrollTop = targetTop;
 
-  if (layer) layer.scrollTop = editor.scrollTop;
+  if (layer) { layer.scrollTop = editor.scrollTop; layer.scrollLeft = editor.scrollLeft; }
   gutter.scrollTop = editor.scrollTop;
+  const bl2 = document.getElementById('editorBlockLayer');
+  if (bl2) { bl2.scrollTop = editor.scrollTop; bl2.scrollLeft = editor.scrollLeft; }
 }
 
   function liveSearch() {
@@ -1285,7 +1389,6 @@ A bonus quick-reference for regular expressions, useful with this editor's Find 
 		} else {
 		  doFind(true);
 		}
-		// findInput đã giữ focus sẵn, không cần focus lại
 		return;
 	  }
 	  
@@ -1339,7 +1442,14 @@ A bonus quick-reference for regular expressions, useful with this editor's Find 
 		tabs.push(t);
 		activeId = t.id;
 		editor.value = t.content;
-		editor.readOnly = false;   // thêm dòng này
+		editor.scrollTop = 0;
+		editor.scrollLeft = 0;
+		gutter.scrollTop = 0;
+		const hl = document.getElementById('editorHighlightLayer');
+		if (hl) { hl.scrollTop = 0; hl.scrollLeft = 0; }
+		const bl = document.getElementById('editorBlockLayer');
+		if (bl) { bl.scrollTop = 0; bl.scrollLeft = 0; }
+		editor.readOnly = false; 
 		renderTabbar();
 		render();
 		saveTabs();
