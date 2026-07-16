@@ -349,7 +349,7 @@ input:disabled, textarea:disabled, select:disabled {
 }
 
 .post-content {
-  max-width: 720px; margin: 0 auto; padding: 0 24px 60px;
+  max-width: 1080px; margin: 0 auto; padding: 0 24px 60px;
   font-size: 18px; line-height: 1.8; color: var(--tri-text-secondary);
   font-weight: 400; text-align: left;
 }
@@ -397,8 +397,12 @@ input:disabled, textarea:disabled, select:disabled {
 .post-content summary::marker { color: var(--tri-text-quaternary); }
 
 @media (max-width: 600px) {
+  
+  
   .post-content { font-size: 16px; }
   .post-content .columns-2 { grid-template-columns: 1fr; gap: 16px; }
+  
+  
 }
 
 .btn {
@@ -440,11 +444,15 @@ input:disabled, textarea:disabled, select:disabled {
 @keyframes skeleton-loading { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
 
 .drawer-overlay.open { opacity: 1; pointer-events: auto; }
+
 .drawer-overlay.open .drawer { transform: translateX(0); }
 
 .dropdown { position: relative; display: inline-block; }
+
 .dropdown.open .dropdown-trigger { border-color: var(--tri-primary); box-shadow: 0 0 0 3px var(--tri-focus-ring); }
+
 .dropdown.open .dropdown-chevron { transform: rotate(180deg); }
+
 .dropdown-menu {
   position: absolute; top: calc(100% + 6px); left: 0;
   min-width: 220px; background: var(--tri-surface-1);
@@ -470,6 +478,7 @@ input:disabled, textarea:disabled, select:disabled {
 .dropdown-item.danger:hover { background: var(--tri-danger-muted); }
 
 .accordion-item.open .accordion-chevron { transform: rotate(180deg); }
+
 .accordion-item.open .accordion-content { max-height: 300px; }
 
 .input, .textarea, .select { width: 100%; font-family: var(--tri-font-sans); }
@@ -597,11 +606,12 @@ html, body { height: 100%; }
 
 /* =========================================================
    Markdown Viewer — App Shell  (prefix: mdv-)
-   Follows Tri.UI token system. Section per Architecture.md
+   Follows Tri.UI v5 token system. Section per Architecture.md §13.
    ========================================================= */
 
 .mdv-shell { display: flex; flex-direction: column; height: 100vh; overflow: hidden; background: var(--tri-bg); }
 
+/* ---- Topbar (combined with tabbar) ---- */
 .mdv-topbar {
   height: var(--tri-header-height);
   flex-shrink: 0;
@@ -614,6 +624,7 @@ html, body { height: 100%; }
 
 .mdv-topbar-right { display: flex; align-items: center; gap: var(--tri-space-2); flex-shrink: 0; }
 
+/* ---- Document Tab bar (inside topbar) ---- */
 .mdv-tabbar {
   display: flex; align-items: center; gap: var(--tri-space-2);
   overflow-x: auto;
@@ -657,6 +668,7 @@ html, body { height: 100%; }
 .mdv-tab-add { display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: var(--tri-radius-md); color: var(--tri-text-tertiary); flex-shrink: 0; cursor: pointer; }
 .mdv-tab-add:hover { background: var(--tri-hover-bg); color: var(--tri-text-primary); }
 
+/* ---- Formatting toolbar (reuses .format-toolbar base look) ---- */
 .mdv-toolbar {
   padding: 6px 8px; gap: 0; flex-wrap: wrap; overflow: visible; scrollbar-width: thin;
   position: sticky; top: 0; z-index: 5;
@@ -667,9 +679,18 @@ html, body { height: 100%; }
 .mdv-toolbar::-webkit-scrollbar { height: 4px; }
 .mdv-toolbar .fmt-btn { flex-shrink: 0; }
 .mdv-toolbar-spacer { flex: 1; }
+/* ---- Main area ---- */
 .mdv-main { flex: 1; display: flex; overflow: hidden; min-height: 0; position: relative; }
 .mdv-pane { min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
 .mdv-editor-pane { background: var(--tri-editor-bg); }
+.mdv-editor-pane.mdv-wrap-on .mdv-editor,
+.mdv-editor-pane.mdv-wrap-on .mdv-editor-highlight-layer,
+.mdv-editor-pane.mdv-wrap-on .mdv-editor-block-layer {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+.mdv-editor-pane.mdv-wrap-on .mdv-editor { overflow-x: hidden; }
 .mdv-preview-pane { background: var(--tri-preview-bg); position: relative; }
 .mdv-pane-hidden { display: none !important; }
 
@@ -677,7 +698,7 @@ html, body { height: 100%; }
 .mdv-editor-scroll { flex: 1; overflow: hidden; position: relative; }
 .mdv-editor-inner { display: flex; height: 100%; }
 .mdv-gutter {
-  flex-shrink: 0; padding: 20px 10px 20px 0; text-align: right;
+  flex-shrink: 0; padding: 20px 10px 40vh 0; text-align: right;
   font-family: var(--tri-font-mono); font-size: 13.5px; line-height: var(--tri-leading-relaxed);
   color: var(--tri-gutter-color); user-select: none;
   white-space: pre; overflow: hidden;
@@ -686,19 +707,18 @@ html, body { height: 100%; }
   flex: 1; border: none; outline: none; resize: none;
   background: transparent; color: var(--tri-text-primary);
   font-family: var(--tri-font-mono); font-size: 13.5px; line-height: var(--tri-leading-relaxed);
-  padding: 20px 24px 20px 12px; width: 100%; height: 100%;
-  tab-size: 2;
-  overflow-y: auto;
+  padding: 20px 24px 40vh 12px; width: 100%; height: 100%;
+  tab-size: 2; white-space: pre;
+  overflow-y: auto; overflow-x: auto;
 }
 .mdv-editor:focus { box-shadow: none; border: none; }
 .mdv-editor::placeholder { color: var(--tri-text-quaternary); }
 .mdv-editor-wrap { position: relative; flex: 1; height: 100%; }
 .mdv-editor-wrap .mdv-editor { position: relative; z-index: 1; width: 100%; height: 100%; }
 .mdv-editor-highlight-layer {
-  position: absolute; inset: 0; z-index: 0;
+  position: absolute; inset: 0; z-index: 0; white-space: pre;
   margin: 0; padding: 20px 24px 40vh 12px;
   font-family: var(--tri-font-mono); font-size: 13.5px; line-height: var(--tri-leading-relaxed);
-  white-space: pre-wrap; word-wrap: break-word; overflow-wrap: break-word;
   color: transparent; pointer-events: none; tab-size: 2; overflow: hidden;
 }
 .mdv-readtime { color: var(--tri-text-secondary); }
@@ -714,10 +734,9 @@ html, body { height: 100%; }
   background: var(--tri-warning); box-shadow: 0 0 0 1px var(--tri-warning);
 }
 .mdv-editor-block-layer {
-  position: absolute; inset: 0; z-index: 0;
+  position: absolute; inset: 0; z-index: 0; white-space: pre;
   margin: 0; padding: 20px 24px 40vh 12px;
   font-family: var(--tri-font-mono); font-size: 13.5px; line-height: var(--tri-leading-relaxed);
-  white-space: pre-wrap; word-wrap: break-word; overflow-wrap: break-word;
   color: transparent; pointer-events: none; tab-size: 2; overflow: hidden;
 }
 .mdv-editor-block-layer .mdv-block-band {
@@ -731,10 +750,9 @@ html, body { height: 100%; }
   display: inline-block;
   width: 10px; height: 10px;
   margin-left: 6px;
-  border-radius: 50%;
+  border-radius: 2px;
+  margin-bottom:2px;
   vertical-align: middle;
-  border: 1px solid rgba(0,0,0,0.12);
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.4);
 }
 .mdv-block { width: 100%; }
 .mdv-block-inner { width: 100%; margin: 0 auto; padding: 0 40px; }
@@ -745,10 +763,12 @@ html, body { height: 100%; }
   box-shadow: inset 5px 0 0 var(--tri-accent), inset -5px 0 0 var(--tri-accent);
 }
 
+/* ---- Resizer ---- */
 .mdv-resizer { width: 6px; flex-shrink: 0; cursor: col-resize; background: var(--tri-border-muted); position: relative; transition: background-color var(--tri-transition-fast); }
 .mdv-resizer:hover, .mdv-resizer.dragging { background: var(--tri-accent); }
 .mdv-resizer::after { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 3px; height: 28px; border-radius: var(--tri-radius-full); background: var(--tri-border); }
 
+/* ---- Status bar ---- */
 .mdv-statusbar {
   position: relative; z-index: 5;
   height: 30px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
@@ -765,6 +785,7 @@ html, body { height: 100%; }
 
 .mdv-view-toggle button.active { background: var(--tri-primary-muted); color: var(--tri-primary); }
 
+/* ---- Find & Replace panel ---- */
 .mdv-findbar {
   position: fixed; top: 58px; right: 16px; z-index: 50;
   width: 340px; max-width: calc(100vw - 32px); background: var(--tri-surface-1); border: 1px solid var(--tri-border-muted);
@@ -779,6 +800,7 @@ html, body { height: 100%; }
 .mdv-findbar-opts .fmt-btn.on { background: var(--tri-primary-muted); color: var(--tri-primary); }
 .mdv-findbar-count { font-size: 11px; color: var(--tri-text-quaternary); white-space: nowrap; padding: 0 4px; }
 
+/* ---- Emoji / Symbol insert popup ---- */
 .mdv-insert-popup {
   position: absolute; top: 48px; right: 16px; z-index: 30;
   width: 240px; background: var(--tri-surface-1); border: 1px solid var(--tri-border-muted);
@@ -795,6 +817,7 @@ html, body { height: 100%; }
 }
 .mdv-insert-item:hover { background: var(--tri-hover-bg); }
 
+/* ---- Drop zone (drag & drop import) ---- */
 .mdv-dropzone-overlay {
   position: fixed; inset: 0; z-index: 200; background: var(--tri-scrim);
   display: none; align-items: center; justify-content: center;
@@ -806,6 +829,7 @@ html, body { height: 100%; }
   text-align: center; color: var(--tri-text-secondary);
 }
 
+/* ---- Preview: markdown content skin (extends .post-content patterns) ---- */
 .mdv-preview h1 { font-size: 30px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 0.6em; color: var(--tri-text-primary); }
 .mdv-preview h2 { font-size: 23px; font-weight: 700; margin-top: 1.8em; margin-bottom: 0.6em; padding-bottom: 0.3em; border-bottom: 1px solid var(--tri-border-muted); color: var(--tri-text-primary); }
 .mdv-preview h3 { font-size: 19px; font-weight: 600; margin-top: 1.5em; margin-bottom: 0.5em; color: var(--tri-text-primary); }
@@ -863,8 +887,10 @@ html, body { height: 100%; }
 .mdv-preview .callout-note p, .mdv-preview .callout-tip p, .mdv-preview .callout-warning p, .mdv-preview .callout-important p, .mdv-preview .callout-caution p { margin: 0 0 0.5em; }
 .mdv-preview .callout-note p:last-child, .mdv-preview .callout-tip p:last-child, .mdv-preview .callout-warning p:last-child, .mdv-preview .callout-important p:last-child, .mdv-preview .callout-caution p:last-child { margin-bottom: 0; }
 
+/* ---- Export menu items with sublabel ---- */
 .dropdown-item .sub { font-size: 11px; color: var(--tri-text-quaternary); font-weight: 400; }
 
+/* ---- Auto-hide scrollbars: hidden by default, shown on hover/scroll ---- */
 .mdv-autohide-scroll {
   scrollbar-width: thin;
   scrollbar-color: transparent transparent;
@@ -880,6 +906,7 @@ html, body { height: 100%; }
 .mdv-autohide-scroll.is-scrolling::-webkit-scrollbar-thumb { background-color: var(--tri-border); background-clip: padding-box; }
 .mdv-autohide-scroll::-webkit-scrollbar-thumb:hover { background-color: var(--tri-text-quaternary); background-clip: padding-box; }
 
+/* ---- Table of Contents (shared link styling) ---- */
 .mdv-toc-sidebar-header, .mdv-drawer-toc-header {
   font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em;
   color: var(--tri-text-quaternary); padding: 14px 16px 8px; flex-shrink: 0;
@@ -896,6 +923,7 @@ html, body { height: 100%; }
 .mdv-toc-sidebar-list .toc-lvl-4, .mdv-drawer-toc-list .toc-lvl-4 { padding-left: 44px; font-size: 12px; }
 .mdv-toc-empty { padding: 4px 10px; font-size: 12px; color: var(--tri-text-quaternary); }
 
+/* Desktop: persistent left TOC sidebar */
 .mdv-toc-sidebar {
   width: 220px; flex-shrink: 0; display: flex; flex-direction: column;
   border-right: 1px solid var(--tri-border-muted); background: var(--tri-preview-bg);
@@ -903,6 +931,7 @@ html, body { height: 100%; }
 }
 .mdv-toc-sidebar-list { flex: 1; overflow-y: auto; padding: 0 8px 16px; }
 
+/* ---- Footnotes ---- */
 .mdv-preview .footnotes { margin-top: 2.5em; font-size: 13px; color: var(--tri-text-tertiary); }
 .mdv-preview .footnotes hr { margin: 0 0 1.2em; }
 .mdv-preview .footnotes ol { padding-left: 1.2em; }
@@ -910,6 +939,7 @@ html, body { height: 100%; }
 .mdv-preview .footnotes p { display: inline; margin: 0; }
 .mdv-preview .footnote-backref { margin-left: 4px; text-decoration: none; }
 
+/* ---- Compact menu button & drawer (mobile / tablet) ---- */
 .mdv-compact-only { display: none; }
 .mdv-drawer-overlay {
   position: fixed; inset: 0; z-index: 90; background: var(--tri-scrim);
@@ -944,6 +974,7 @@ html, body { height: 100%; }
 .mdv-drawer-toc-list { flex: 1; overflow-y: auto; padding: 0 10px 16px; }
 .mdv-mobile-only { display: none; }
 
+/* ---- Responsive ---- */
 @media (min-width: 901px) {
   .mdv-desktop-only { display: inline-flex; }
 }
