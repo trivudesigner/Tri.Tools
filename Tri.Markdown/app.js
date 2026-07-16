@@ -21,6 +21,7 @@
         if (data.tabs && data.tabs.length) {
           tabs = data.tabs;
           activeId = data.activeId || tabs[0].id;
+          // ensure 'Tri.Markdown' cheat-sheet tab exists
           if (!tabs.some(t => t.name === 'Tri.Markdown')) {
             tabs.unshift(newTab('Tri.Markdown', SAMPLE_MD));
             activeId = tabs[0].id;
@@ -28,7 +29,7 @@
           return;
         }
       }
-    } catch (e) {  }
+    } catch (e) { /* ignore */ }
     const t = newTab('Tri.Markdown', SAMPLE_MD);
     tabs = [t];
     activeId = t.id;
@@ -36,8 +37,8 @@
 
   function saveTabs() {
     try {
-      localStorage.setItem(LS_KEY, JSON.stringify({ tabs, activeId }, (k, v) => k === 'fileHandle' ? undefined : v));
-    } catch (e) {  }
+      localStorage.setItem(LS_KEY, JSON.stringify({ tabs, activeId }));
+    } catch (e) { /* storage full or unavailable */ }
   }
 
   function getActiveTab() { return tabs.find(t => t.id === activeId); }
@@ -352,9 +353,10 @@ A bonus quick-reference for regular expressions, useful with this editor's Find 
     } catch (e) { highlighted = escapeHtml(code); }
     return `<pre><button class="fmt-btn mdv-code-copy" data-copy title="Copy"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button><code class="hljs${langClass}">${highlighted}</code></pre>`;
   };
-  renderer.checkbox = () => '';
+  renderer.checkbox = () => ''; // suppress marked's own <input type="checkbox">; we render a custom SVG below
   renderer.listitem = (text, task, checked) => {
     if (task) {
+      // strip marked's rendered checkbox input (and any literal "[ ]"/"[x]") so only our SVG remains
       const clean = text.replace(/<input[^>]*>\s*/i, '').replace(/^\[[ xX]\]\s*/, '').trim();
       const check = checked
         ? '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="4" fill="var(--tri-accent, #2563EB)"/><path d="M7 13l3 3 7-7" stroke="var(--tri-text-inverse, #fff)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>'
@@ -383,9 +385,9 @@ A bonus quick-reference for regular expressions, useful with this editor's Find 
 
   const COLOR_RE = new RegExp(
     '^(' +
-      '#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})' + 
-      '|rgba?\\(\\s*\\d{1,3}\\s*,\\s*\\d{1,3}\\s*,\\s*\\d{1,3}\\s*(,\\s*[\\d.]+\\s*)?\\)' +
-      '|hsla?\\(\\s*\\d{1,3}\\s*,\\s*\\d{1,3}%\\s*,\\s*\\d{1,3}%\\s*(,\\s*[\\d.]+\\s*)?\\)' +
+      '#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})' +          // hex: #fff, #ffff, #ffffff, #ffffffff
+      '|rgba?\\(\\s*\\d{1,3}\\s*,\\s*\\d{1,3}\\s*,\\s*\\d{1,3}\\s*(,\\s*[\\d.]+\\s*)?\\)' + // rgb/rgba
+      '|hsla?\\(\\s*\\d{1,3}\\s*,\\s*\\d{1,3}%\\s*,\\s*\\d{1,3}%\\s*(,\\s*[\\d.]+\\s*)?\\)' + // hsl/hsla
     ')$', 'i'
   );
 
@@ -621,6 +623,7 @@ A bonus quick-reference for regular expressions, useful with this editor's Find 
     preview.innerHTML = html;
     buildToc();
 
+    // Open external links in a new tab (leave in-page anchors like #heading / #fn-1 alone)
     preview.querySelectorAll('a[href]').forEach(a => {
       const href = a.getAttribute('href') || '';
       if (!href.startsWith('#')) {
@@ -629,6 +632,7 @@ A bonus quick-reference for regular expressions, useful with this editor's Find 
       }
     });
 
+    // Re-apply the preview search highlight if Find is open in view mode
     if (findBar.classList.contains('open') && findBar.classList.contains('mdv-find-only') && findInput.value) {
       previewMatchIdx = -1;
       highlightPreviewMatches(findInput.value);
@@ -708,34 +712,36 @@ A bonus quick-reference for regular expressions, useful with this editor's Find 
   }
 
   function addTab() {
-    if (tabs.length >= 20) { alert('Maximum 20 tabs reached.'); return; }
-    saveEditorIntoTab();
-    const t = newTab('Untitled ' + (tabs.length + 1), '');
-    tabs.push(t);
-    activeId = t.id;
-    editor.value = '';
-    renderTabbar();
-    render();
-    saveTabs();
-    editor.focus();
-  }
+	  if (tabs.length >= 20) { alert('Maximum 20 tabs reached.'); return; }
+	  saveEditorIntoTab();
+	  const t = newTab('Untitled ' + (tabs.length + 1), '');
+	  tabs.push(t);
+	  activeId = t.id;
+	  editor.value = '';
+	  editor.readOnly = false;
+	  setViewMode('edit');
+	  renderTabbar();
+	  render();
+	  saveTabs();
+	}
 
   function closeTab(id) {
-    const t = tabs.find(x => x.id === id);
-    if (!t || t.name === 'Tri.Markdown') return;
-    const idx = tabs.indexOf(t);
-    if (tabs.length === 1) {
-      tabs[idx] = newTab('Untitled', '');
-      activeId = tabs[idx].id;
-    } else {
-      tabs.splice(idx, 1);
-      if (activeId === id) activeId = tabs[Math.max(0, idx - 1)].id;
-    }
-    editor.value = getActiveTab().content;
-    renderTabbar();
-    render();
-    saveTabs();
-  }
+	  const t = tabs.find(x => x.id === id);
+	  if (!t || t.name === 'Tri.Markdown') return;
+	  const idx = tabs.indexOf(t);
+	  if (tabs.length === 1) {
+		tabs[idx] = newTab('Untitled', '');
+		activeId = tabs[idx].id;
+	  } else {
+		tabs.splice(idx, 1);
+		if (activeId === id) activeId = tabs[Math.max(0, idx - 1)].id;
+	  }
+	  editor.value = getActiveTab().content;
+	  editor.readOnly = getActiveTab().name === 'Tri.Markdown';   // thêm dòng này
+	  renderTabbar();
+	  render();
+	  saveTabs();
+	}
 
   function renameTab(id) {
     const t = tabs.find(x => x.id === id);
@@ -945,8 +951,8 @@ A bonus quick-reference for regular expressions, useful with this editor's Find 
     else if (mod && e.key.toLowerCase() === 'f') { e.preventDefault(); openFindBar(); }
     else if (mod && e.key.toLowerCase() === 't') { e.preventDefault(); addTab(); }
     else if (mod && e.key.toLowerCase() === 'w') { e.preventDefault(); closeTab(activeId); }
-    else if (mod && e.key.toLowerCase() === 's') { e.preventDefault(); saveCurrentFile(); }
-    else if (mod && e.key.toLowerCase() === 'o') { e.preventDefault(); if (supportsFSAccess) openFileWithPicker(); else fileInput.click(); }
+    else if (mod && e.key.toLowerCase() === 's') { e.preventDefault(); exportMarkdown(); }
+    else if (mod && e.key.toLowerCase() === 'o') { e.preventDefault(); fileInput.click(); }
     else if (e.key === 'Escape') {if (findBar.classList.contains('open')) {closeFindBar();} else closeToc();}
   });
 
@@ -979,9 +985,11 @@ A bonus quick-reference for regular expressions, useful with this editor's Find 
     const lineHeight = parseInt(getComputedStyle(editor).lineHeight) || 21;
     const paddingTop = parseFloat(getComputedStyle(editor).paddingTop) || 0;
 
+    // Dòng đang nằm ở mốc 30% chiều cao khung editor
     const topLine = (editor.scrollTop - paddingTop) / lineHeight + 1;
     const anchorLine = Math.max(1, topLine + (editor.clientHeight / lineHeight) * SYNC_ANCHOR_RATIO);
 
+    // Tìm block có headline (startLine) gần nhất, nhỏ hơn hoặc bằng anchorLine
     let idx = 0;
     for (let i = 0; i < mdvBlocks.length; i++) {
       if (mdvBlocks[i].startLine <= anchorLine) idx = i; else break;
@@ -994,6 +1002,7 @@ A bonus quick-reference for regular expressions, useful with this editor's Find 
       return;
     }
 
+    // Neo headline của block đó tại đúng mốc 30% chiều cao khung preview
     previewScroll.scrollTop = Math.max(0, Math.min(
       target.offsetTop - previewScroll.clientHeight * SYNC_ANCHOR_RATIO,
       previewScroll.scrollHeight - previewScroll.clientHeight
@@ -1011,6 +1020,7 @@ A bonus quick-reference for regular expressions, useful with this editor's Find 
     const rect = document.getElementById('mainArea').getBoundingClientRect();
     let pct = ((e.clientX - rect.left) / rect.width) * 100;
     pct = Math.min(80, Math.max(20, pct));
+    // preview pane sits on the left, editor pane on the right
     previewPane.style.flex = `0 0 ${pct}%`;
     editorPane.style.flex = `1 1 ${100 - pct}%`;
   });
@@ -1227,6 +1237,8 @@ A bonus quick-reference for regular expressions, useful with this editor's Find 
 
   editor.setSelectionRange(s, e);
 
+  // Luôn tính thủ công vì markEl nằm trong lớp overlay riêng,
+  // không phải con thật của <textarea> nên scrollIntoView không hoạt động.
   const lineHeight = parseInt(getComputedStyle(editor).lineHeight) || 21;
   const linesBefore = text.substring(0, s).split('\n').length;
   const visibleLines = Math.floor(editor.clientHeight / lineHeight);
@@ -1261,6 +1273,7 @@ A bonus quick-reference for regular expressions, useful with this editor's Find 
 		  return; 
 		}
 		
+		// Edit mode
 		if (matches.length) {
 		  if (e.shiftKey) {
 			matchIdx = (matchIdx - 1 + matches.length) % matches.length;
@@ -1272,6 +1285,7 @@ A bonus quick-reference for regular expressions, useful with this editor's Find 
 		} else {
 		  doFind(true);
 		}
+		// findInput đã giữ focus sẵn, không cần focus lại
 		return;
 	  }
 	  
@@ -1310,57 +1324,30 @@ A bonus quick-reference for regular expressions, useful with this editor's Find 
 
   /* ================= Import ================= */
   const fileInput = document.getElementById('fileInput');
-  const supportsFSAccess = 'showOpenFilePicker' in window;
-
-  document.getElementById('importFileBtn').addEventListener('click', () => {
-    if (supportsFSAccess) openFileWithPicker();
-    else fileInput.click();
-  });
+  document.getElementById('importFileBtn').addEventListener('click', () => fileInput.click());
   fileInput.addEventListener('change', () => {
     const f = fileInput.files[0];
     if (f) loadFileIntoNewTab(f);
     fileInput.value = '';
   });
 
-  async function openFileWithPicker() {
-    try {
-      const [handle] = await window.showOpenFilePicker({
-        types: [{ description: 'Markdown', accept: { 'text/markdown': ['.md', '.markdown', '.txt'] } }],
-        excludeAcceptAllOption: false,
-        multiple: false
-      });
-      const file = await handle.getFile();
-      const text = await file.text();
-      saveEditorIntoTab();
-      const t = newTab(file.name.replace(/\.(md|markdown|txt)$/i, ''), text);
-      t.fileHandle = handle;
-      t.fileName = file.name;
-      tabs.push(t);
-      activeId = t.id;
-      editor.value = t.content;
-      renderTabbar();
-      render();
-      saveTabs();
-    } catch (e) {
-      if (e.name !== 'AbortError') console.error(e);
-    }
-  }
-
   function loadFileIntoNewTab(file) {
-    const reader = new FileReader();
-    reader.onload = () => {
-      saveEditorIntoTab();
-      const t = newTab(file.name.replace(/\.(md|markdown|txt)$/i, ''), reader.result);
-      tabs.push(t);
-      activeId = t.id;
-      editor.value = t.content;
-      renderTabbar();
-      render();
-      saveTabs();
-    };
-    reader.readAsText(file);
-  }
+	  const reader = new FileReader();
+	  reader.onload = () => {
+		saveEditorIntoTab();
+		const t = newTab(file.name.replace(/\.(md|markdown|txt)$/i, ''), reader.result);
+		tabs.push(t);
+		activeId = t.id;
+		editor.value = t.content;
+		editor.readOnly = false;   // thêm dòng này
+		renderTabbar();
+		render();
+		saveTabs();
+	  };
+	  reader.readAsText(file);
+	}
 
+  // Drag & drop
   const dropOverlay = document.getElementById('dropOverlay');
   let dragCounter = 0;
   window.addEventListener('dragenter', (e) => { e.preventDefault(); dragCounter++; dropOverlay.classList.add('active'); });
@@ -1374,6 +1361,7 @@ A bonus quick-reference for regular expressions, useful with this editor's Find 
     files.forEach(loadFileIntoNewTab);
   });
 
+  // URL import
   const urlModalOverlay = document.getElementById('urlModalOverlay');
   document.getElementById('importUrlBtn').addEventListener('click', () => urlModalOverlay.classList.add('open'));
   document.getElementById('urlModalClose').addEventListener('click', () => urlModalOverlay.classList.remove('open'));
@@ -1409,34 +1397,6 @@ A bonus quick-reference for regular expressions, useful with this editor's Find 
   function exportMarkdown() {
     const t = getActiveTab();
     download(`${t.name}.md`, t.content, 'text/markdown;charset=utf-8');
-  }
-
-  async function verifyWritePermission(handle) {
-    const opts = { mode: 'readwrite' };
-    if ((await handle.queryPermission(opts)) === 'granted') return true;
-    if ((await handle.requestPermission(opts)) === 'granted') return true;
-    return false;
-  }
-
-  async function saveCurrentFile() {
-    saveEditorIntoTab();
-    const t = getActiveTab();
-    if (t.fileHandle) {
-      try {
-        const ok = await verifyWritePermission(t.fileHandle);
-        if (!ok) { exportMarkdown(); return; }
-        const writable = await t.fileHandle.createWritable();
-        await writable.write(t.content);
-        await writable.close();
-        t.dirty = false;
-        renderTabbar();
-        saveTabs();
-        return;
-      } catch (e) {
-        console.error('Save to disk failed, falling back to download:', e);
-      }
-    }
-    exportMarkdown();
   }
 
   function exportHtmlStandalone() {
@@ -1495,7 +1455,6 @@ img{max-width:100%;border-radius:8px;}
 
   /* ================= Dropdown open/close (generic) ================= */
   document.querySelectorAll('.dropdown').forEach(dd => {
-    if (dd.id === 'exportDropdown') return; 
     const trigger = dd.querySelector('button');
     trigger.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -1505,40 +1464,6 @@ img{max-width:100%;border-radius:8px;}
     });
   });
   document.addEventListener('click', () => document.querySelectorAll('.dropdown.open').forEach(o => o.classList.remove('open')));
-
-  /* ---- Export/Save trigger: quick click = save (Ctrl+S), long-press or right-click = menu ---- */
-  (() => {
-    const dd = document.getElementById('exportDropdown');
-    const trigger = document.getElementById('exportTrigger');
-    const HOLD_MS = 450;
-    let holdTimer = null;
-    let didLongPress = false;
-
-    function openMenu() {
-      document.querySelectorAll('.dropdown.open').forEach(o => o.classList.remove('open'));
-      dd.classList.add('open');
-    }
-
-    trigger.addEventListener('pointerdown', (e) => {
-      if (e.button !== undefined && e.button !== 0) return;
-      didLongPress = false;
-      holdTimer = setTimeout(() => { didLongPress = true; openMenu(); }, HOLD_MS);
-    });
-    ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev =>
-      trigger.addEventListener(ev, () => { clearTimeout(holdTimer); })
-    );
-    trigger.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (didLongPress) { didLongPress = false; return; } 
-      saveCurrentFile();
-    });
-    trigger.addEventListener('contextmenu', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      clearTimeout(holdTimer);
-      openMenu();
-    });
-  })();
 
   /* ================= Table of Contents (desktop sidebar + drawer) ================= */
   const tocSidebarList = document.getElementById('tocSidebarList');
@@ -1604,7 +1529,7 @@ img{max-width:100%;border-radius:8px;}
   menuBtn.addEventListener('click', openDrawer);
   drawerClose.addEventListener('click', closeDrawer);
   drawerOverlay.addEventListener('click', closeDrawer);
-  drawerOpenBtn.addEventListener('click', () => { closeDrawer(); if (supportsFSAccess) openFileWithPicker(); else fileInput.click(); });
+  drawerOpenBtn.addEventListener('click', () => { closeDrawer(); fileInput.click(); });
   drawerSaveBtn.addEventListener('click', () => { closeDrawer(); exportMarkdown(); });
   if (drawerRenameBtn) drawerRenameBtn.addEventListener('click', () => { closeDrawer(); renameTab(activeId); });
 
