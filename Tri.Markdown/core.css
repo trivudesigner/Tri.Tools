@@ -859,8 +859,8 @@ html, body { height: 100%; }
 .mdv-preview td { padding: 8px 12px; border-bottom: 1px solid var(--tri-border-muted); color: var(--tri-text-secondary); }
 .mdv-preview th[align="center"], .mdv-preview td[align="center"] { text-align: center; }
 .mdv-preview th[align="right"], .mdv-preview td[align="right"] { text-align: right; }
-.mdv-preview .task-list-item { list-style: none; margin-left: -1.4em; padding-left: 0; display: flex; gap: 8px; align-items: center; }
-.mdv-preview .task-list-item svg { flex-shrink: 0; }
+.mdv-preview .task-list-item { list-style: none; margin-left: -1.4em; padding-left: 0; display: flex; gap: 8px; align-items: flex-start; }
+.mdv-preview .task-list-item svg { flex-shrink: 0; margin-top: 0.4em; }
 .mdv-preview .footnote-ref, .mdv-preview .footnote-backref { color: var(--tri-primary); }
 .mdv-preview sup { color: var(--tri-primary); }
 .mdv-preview kbd { font-family: var(--tri-font-mono); font-size: 0.8em; background: var(--tri-surface-2); border: 1px solid var(--tri-border); border-bottom-width: 2px; border-radius: 4px; padding: 1px 6px; }
