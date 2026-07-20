@@ -606,7 +606,7 @@ html, body { height: 100%; }
 
 /* =========================================================
    Markdown Viewer — App Shell  (prefix: mdv-)
-   Follows Tri.UI token system.
+   Follows Tri.UI v5 token system. Section per Architecture.md §13.
    ========================================================= */
 
 .mdv-shell { display: flex; flex-direction: column; height: 100vh; overflow: hidden; background: var(--tri-bg); }
@@ -986,7 +986,7 @@ html, body { height: 100%; }
 .mdv-float-toggle-btn {
   position: absolute;
   right: 16px;
-  bottom: 16px;
+  bottom: calc(16px + var(--mdv-vvb-offset, 0px));
   z-index: 15;
   width: 42px;
   height: 42px;
@@ -1000,7 +1000,7 @@ html, body { height: 100%; }
   justify-content: center;
   cursor: pointer;
   box-shadow: var(--tri-shadow-lg);
-  transition: all var(--tri-transition-fast);
+  transition: bottom 0.15s ease, all var(--tri-transition-fast);
 }
 .mdv-float-toggle-btn:active { transform: scale(0.94); }
 [data-theme="dark"] .mdv-float-toggle-btn { background: rgba(22, 28, 38, 0.6); }
