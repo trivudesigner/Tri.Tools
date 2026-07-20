@@ -9,8 +9,8 @@
 
   function uid() { return 't' + Math.random().toString(36).slice(2, 10); }
 
-  function newTab(name, content) {
-    return { id: uid(), name: name || 'Untitled', content: content || '', dirty: false };
+  function newTab(name, content, builtin) {
+    return { id: uid(), name: name || 'Untitled', content: content || '', dirty: false, builtin: !!builtin };
   }
 
   function loadTabs() {
@@ -21,15 +21,15 @@
         if (data.tabs && data.tabs.length) {
           tabs = data.tabs;
           activeId = data.activeId || tabs[0].id;
-          if (!tabs.some(t => t.name === 'Tri.Markdown')) {
-            tabs.unshift(newTab('Tri.Markdown', SAMPLE_MD));
+          if (!tabs.some(t => t.builtin)) {
+            tabs.unshift(newTab('Tri.Markdown', SAMPLE_MD, true));
             activeId = tabs[0].id;
           }
           return;
         }
       }
     } catch (e) { }
-    const t = newTab('Tri.Markdown', SAMPLE_MD);
+    const t = newTab('Tri.Markdown', SAMPLE_MD, true);
     tabs = [t];
     activeId = t.id;
   }
@@ -389,12 +389,17 @@ A bonus quick-reference for regular expressions, useful with this editor's Find 
     ')$', 'i'
   );
 
+  const URL_RE = /^(https?:\/\/[^\s]+)$/i;
+
   renderer.codespan = (code) => {
     const raw = typeof code === 'string' ? code : String(code);
     const escaped = escapeHtml(raw);
     const trimmed = raw.trim();
     if (COLOR_RE.test(trimmed)) {
       return `<code>${escaped}<span class="mdv-color-dot" style="background:${trimmed}"></span></code>`;
+    }
+    if (URL_RE.test(trimmed)) {
+      return `<code class="mdv-code-url" data-url="${escapeHtml(trimmed)}">${escaped}<span class="mdv-ext-link-icon" title="Open link"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></span></code>`;
     }
     return `<code>${escaped}</code>`;
   };
@@ -559,7 +564,7 @@ A bonus quick-reference for regular expressions, useful with this editor's Find 
 	  const layer = document.getElementById('editorBlockLayer');
 	  if (layer) {
 		layer.innerHTML = escapeHtml(editor.value);
-		layer.scrollTop = editor.scrollTop;   // thêm dòng này — fix lệch vị trí lần đầu mở file
+		layer.scrollTop = editor.scrollTop;
 		layer.scrollLeft = editor.scrollLeft;
 	  }
 	  preview.querySelectorAll('.mdv-block.mdv-block-active').forEach(el => el.classList.remove('mdv-block-active'));
@@ -679,7 +684,7 @@ A bonus quick-reference for regular expressions, useful with this editor's Find 
       const el = document.createElement('div');
       el.className = 'mdv-doc-tab' + (t.id === activeId ? ' active' : '');
       el.dataset.id = t.id;
-      const isCheat = t.name === 'Tri.Markdown';
+      const isCheat = !!t.builtin;
       el.innerHTML = isCheat
         ? `<span class="name bold"><span class="tri">Tri</span><span class="dot">.</span><span class="md">Markdown</span></span>`
         : `<span class="name">${escapeHtml(t.name)}</span>${isCheat ? '' : `<span class="close${t.dirty ? ' dirty' : ''}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>`}`;
@@ -713,7 +718,7 @@ A bonus quick-reference for regular expressions, useful with this editor's Find 
 	if (hl) { hl.scrollTop = 0; hl.scrollLeft = 0; }
 	const bl = document.getElementById('editorBlockLayer');
 	if (bl) { bl.scrollTop = 0; bl.scrollLeft = 0; }
-    editor.readOnly = t.name === 'Tri.Markdown';
+    editor.readOnly = !!t.builtin;
     renderTabbar();
     render();
     saveTabs();
@@ -742,7 +747,7 @@ A bonus quick-reference for regular expressions, useful with this editor's Find 
 
   function closeTab(id) {
 	  const t = tabs.find(x => x.id === id);
-	  if (!t || t.name === 'Tri.Markdown') return;
+	  if (!t || t.builtin) return;
 	  const idx = tabs.indexOf(t);
 	  if (tabs.length === 1) {
 		tabs[idx] = newTab('Untitled', '');
@@ -752,7 +757,7 @@ A bonus quick-reference for regular expressions, useful with this editor's Find 
 		if (activeId === id) activeId = tabs[Math.max(0, idx - 1)].id;
 	  }
 	  editor.value = getActiveTab().content;
-	  editor.readOnly = getActiveTab().name === 'Tri.Markdown';   // thêm dòng này
+	  editor.readOnly = !!getActiveTab().builtin;
 	  renderTabbar();
 	  render();
 	  saveTabs();
@@ -760,7 +765,7 @@ A bonus quick-reference for regular expressions, useful with this editor's Find 
 
   function renameTab(id) {
     const t = tabs.find(x => x.id === id);
-    if (!t || t.name === 'Tri.Markdown') return;
+    if (!t || t.builtin) return;
     const name = prompt('Rename document:', t.name);
     if (name && name.trim()) { t.name = name.trim(); renderTabbar(); saveTabs(); }
   }
@@ -842,7 +847,8 @@ A bonus quick-reference for regular expressions, useful with this editor's Find 
 	  const chars = editor.value.length;
 	  wordCount.textContent = words;
 	  charCount.textContent = chars;
-	  readTime.textContent = `~${Math.max(1, Math.round(words / 200))} min`;
+	  const minLabel = window.matchMedia('(max-width: 600px)').matches ? 'm' : 'min';
+	  readTime.textContent = `~${Math.max(1, Math.round(words / 200))} ${minLabel}`;
 	  statusMsg.textContent = '';
 	  updateLineInfo();
 	}
@@ -1013,6 +1019,10 @@ A bonus quick-reference for regular expressions, useful with this editor's Find 
 	gutter.classList.toggle('mdv-gutter-hidden');
 	e.currentTarget.classList.toggle('active', gutter.classList.contains('mdv-gutter-hidden'));
   });
+  if (window.matchMedia('(max-width: 600px)').matches) {
+    gutter.classList.add('mdv-gutter-hidden');
+    document.getElementById('toggleGutterBtn').classList.add('active');
+  }
   const previewScroll = document.getElementById('previewScroll');
   const SYNC_ANCHOR_RATIO = 0.1;
 
@@ -1099,6 +1109,11 @@ A bonus quick-reference for regular expressions, useful with this editor's Find 
   const resizer = document.getElementById('resizer');
   const editorPane = document.getElementById('editorPane');
 	let wrapOn = false; 
+	if (window.matchMedia('(max-width: 600px)').matches) {
+	  wrapOn = true;
+	  editorPane.classList.add('mdv-wrap-on');
+	  document.getElementById('toggleWrapBtn').classList.add('active');
+	}
 	document.getElementById('toggleWrapBtn').addEventListener('click', (e) => {
 	  wrapOn = !wrapOn;
 	  editorPane.classList.toggle('mdv-wrap-on', wrapOn);
@@ -1133,16 +1148,38 @@ A bonus quick-reference for regular expressions, useful with this editor's Find 
   const mainArea = document.getElementById('mainArea');
   let currentViewMode = 'preview';
 
+  const floatViewToggleBtn = document.getElementById('floatViewToggleBtn');
+  const floatViewToggleIcon = document.getElementById('floatViewToggleIcon');
+  const ICON_EDIT = '<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/>';
+  const ICON_PREVIEW = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+
+  function isMobileView() {
+    return window.matchMedia('(max-width: 600px)').matches;
+  }
+
   function setViewMode(mode) {
     currentViewMode = mode;
     [...viewToggle.children].forEach(b => b.classList.toggle('active', b.dataset.view === mode));
     document.querySelectorAll('[data-drawer-view]').forEach(b => b.classList.toggle('active', b.dataset.drawerView === mode));
-    editorPane.classList.toggle('mdv-pane-hidden', mode === 'preview');
-    previewPane.classList.remove('mdv-pane-hidden');
-    resizer.style.display = mode === 'edit' ? 'block' : 'none';
-    if (mode === 'edit') { editorPane.style.flex = '1 1 50%'; previewPane.style.flex = '1 1 50%'; }
-    else { editorPane.style.flex = '1 1 100%'; previewPane.style.flex = '1 1 100%'; }
+    const mobile = isMobileView();
+    if (mobile) {
+      editorPane.classList.toggle('mdv-pane-hidden', mode !== 'edit');
+      previewPane.classList.toggle('mdv-pane-hidden', mode === 'edit');
+      resizer.style.display = 'none';
+      editorPane.style.flex = '1 1 100%';
+      previewPane.style.flex = '1 1 100%';
+    } else {
+      editorPane.classList.toggle('mdv-pane-hidden', mode === 'preview');
+      previewPane.classList.remove('mdv-pane-hidden');
+      resizer.style.display = mode === 'edit' ? 'block' : 'none';
+      if (mode === 'edit') { editorPane.style.flex = '1 1 50%'; previewPane.style.flex = '1 1 50%'; }
+      else { editorPane.style.flex = '1 1 100%'; previewPane.style.flex = '1 1 100%'; }
+    }
     if (mode !== 'preview') { editor.focus(); }
+    if (floatViewToggleIcon) {
+      floatViewToggleIcon.innerHTML = mode === 'preview' ? ICON_EDIT : ICON_PREVIEW;
+      floatViewToggleBtn.title = mode === 'preview' ? 'Edit' : 'Preview';
+    }
 	updateActiveBlockHighlight();
   }
 
@@ -1154,8 +1191,32 @@ A bonus quick-reference for regular expressions, useful with this editor's Find 
   document.querySelectorAll('[data-drawer-view]').forEach(btn => {
     btn.addEventListener('click', () => { setViewMode(btn.dataset.drawerView); closeDrawer(); });
   });
+  if (floatViewToggleBtn) {
+    floatViewToggleBtn.addEventListener('click', () => {
+      setViewMode(currentViewMode === 'preview' ? 'edit' : 'preview');
+    });
+  }
 
   setViewMode('preview');
+
+  function applyStatLabels() {
+    const mobile = isMobileView();
+    document.querySelectorAll('.mdv-stat-label').forEach(el => {
+      el.textContent = mobile ? el.dataset.short : el.dataset.full;
+    });
+  }
+  applyStatLabels();
+
+  let _wasMobile = isMobileView();
+  window.addEventListener('resize', () => {
+    const nowMobile = isMobileView();
+    if (nowMobile !== _wasMobile) {
+      _wasMobile = nowMobile;
+      setViewMode(currentViewMode);
+      applyStatLabels();
+      updateWordCount();
+    }
+  });
 
   /* ================= Theme ================= */
   const themeToggleBtn = document.getElementById('themeToggleBtn');
@@ -1339,8 +1400,6 @@ A bonus quick-reference for regular expressions, useful with this editor's Find 
 
   editor.setSelectionRange(s, e);
 
-  // Luôn tính thủ công vì markEl nằm trong lớp overlay riêng,
-  // không phải con thật của <textarea> nên scrollIntoView không hoạt động.
   const lineHeight = parseInt(getComputedStyle(editor).lineHeight) || 21;
   const linesBefore = text.substring(0, s).split('\n').length;
   const visibleLines = Math.floor(editor.clientHeight / lineHeight);
@@ -1476,11 +1535,32 @@ A bonus quick-reference for regular expressions, useful with this editor's Find 
   document.getElementById('importUrlBtn').addEventListener('click', () => urlModalOverlay.classList.add('open'));
   document.getElementById('urlModalClose').addEventListener('click', () => urlModalOverlay.classList.remove('open'));
   document.getElementById('urlCancelBtn').addEventListener('click', () => urlModalOverlay.classList.remove('open'));
+
+  function toRawUrl(url) {
+    try {
+      const u = new URL(url);
+      if (u.hostname === 'github.com') {
+        // https://github.com/{user}/{repo}/blob/{branch}/{path} -> raw.githubusercontent.com
+        const m = u.pathname.match(/^\/([^/]+)\/([^/]+)\/blob\/([^/]+)\/(.+)$/);
+        if (m) {
+          const [, user, repo, branch, path] = m;
+          return `https://raw.githubusercontent.com/${user}/${repo}/${branch}/${path}`;
+        }
+      }
+      if (u.hostname === 'gist.github.com' && !u.pathname.endsWith('/raw')) {
+        return url.replace(/\/$/, '') + '/raw';
+      }
+      return url;
+    } catch (e) { return url; }
+  }
+
   document.getElementById('urlLoadBtn').addEventListener('click', async () => {
-    const url = document.getElementById('urlInput').value.trim();
-    if (!url) return;
+    const rawInput = document.getElementById('urlInput').value.trim();
+    if (!rawInput) return;
+    const url = toRawUrl(rawInput);
     try {
       const res = await fetch(url);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
       const text = await res.text();
       saveEditorIntoTab();
       const name = url.split('/').pop().replace(/\.(md|markdown|txt)$/i, '') || 'url-document';
@@ -1563,6 +1643,29 @@ img{max-width:100%;border-radius:8px;}
     setTimeout(() => { btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>'; }, 1500);
   });
 
+  /* ================= Mobile: tap-to-copy code / tap-to-open link codespans ================= */
+  preview.addEventListener('click', (e) => {
+    if (!isMobileView()) return;
+    if (e.target.closest('[data-copy]')) return;
+
+    const urlCode = e.target.closest('.mdv-code-url');
+    if (urlCode) {
+      window.open(urlCode.dataset.url, '_blank', 'noopener');
+      return;
+    }
+
+    const codeEl = e.target.closest('code');
+    if (!codeEl) return;
+    const text = codeEl.innerText.trim();
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+      const flashTarget = codeEl.closest('pre') || codeEl;
+      flashTarget.classList.add('mdv-block-copied');
+      flashChip('Copied!');
+      setTimeout(() => flashTarget.classList.remove('mdv-block-copied'), 400);
+    }).catch(() => {});
+  });
+
   /* ================= Dropdown open/close (generic) ================= */
   document.querySelectorAll('.dropdown').forEach(dd => {
     const trigger = dd.querySelector('button');
@@ -1643,6 +1746,17 @@ img{max-width:100%;border-radius:8px;}
   drawerSaveBtn.addEventListener('click', () => { closeDrawer(); exportMarkdown(); });
   if (drawerRenameBtn) drawerRenameBtn.addEventListener('click', () => { closeDrawer(); renameTab(activeId); });
 
+  const drawerOpenFileBtn = document.getElementById('drawerOpenFileBtn');
+  const drawerOpenGithubBtn = document.getElementById('drawerOpenGithubBtn');
+  const drawerSaveMdBtn = document.getElementById('drawerSaveMdBtn');
+  const drawerSavePdfBtn = document.getElementById('drawerSavePdfBtn');
+  const drawerDonateBtn = document.getElementById('drawerDonateBtn');
+  if (drawerOpenFileBtn) drawerOpenFileBtn.addEventListener('click', () => { closeDrawer(); fileInput.click(); });
+  if (drawerOpenGithubBtn) drawerOpenGithubBtn.addEventListener('click', () => { closeDrawer(); urlModalOverlay.classList.add('open'); });
+  if (drawerSaveMdBtn) drawerSaveMdBtn.addEventListener('click', () => { closeDrawer(); exportMarkdown(); });
+  if (drawerSavePdfBtn) drawerSavePdfBtn.addEventListener('click', () => { closeDrawer(); exportPdf(); });
+  if (drawerDonateBtn) drawerDonateBtn.addEventListener('click', () => { closeDrawer(); /* TODO: add donate link */ });
+
   /* ================= Auto-hide scrollbars (show while actively scrolling) ================= */
   document.querySelectorAll('.mdv-autohide-scroll').forEach(el => {
     let hideTimer = null;
@@ -1660,7 +1774,7 @@ img{max-width:100%;border-radius:8px;}
   loadTabs();
   renderTabbar();
   editor.value = getActiveTab().content;
-  editor.readOnly = getActiveTab().name === 'Tri.Markdown';
+  editor.readOnly = !!getActiveTab().builtin;
   updateGutter();
   updateLineInfo();
   render();
