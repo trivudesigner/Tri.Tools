@@ -564,7 +564,7 @@ A bonus quick-reference for regular expressions, useful with this editor's Find 
 	  const layer = document.getElementById('editorBlockLayer');
 	  if (layer) {
 		layer.innerHTML = escapeHtml(editor.value);
-		layer.scrollTop = editor.scrollTop;
+		layer.scrollTop = editor.scrollTop;   // thêm dòng này — fix lệch vị trí lần đầu mở file
 		layer.scrollLeft = editor.scrollLeft;
 	  }
 	  preview.querySelectorAll('.mdv-block.mdv-block-active').forEach(el => el.classList.remove('mdv-block-active'));
@@ -757,7 +757,7 @@ A bonus quick-reference for regular expressions, useful with this editor's Find 
 		if (activeId === id) activeId = tabs[Math.max(0, idx - 1)].id;
 	  }
 	  editor.value = getActiveTab().content;
-	  editor.readOnly = !!getActiveTab().builtin;
+	  editor.readOnly = !!getActiveTab().builtin;   // thêm dòng này
 	  renderTabbar();
 	  render();
 	  saveTabs();
@@ -1199,6 +1199,19 @@ A bonus quick-reference for regular expressions, useful with this editor's Find 
 
   setViewMode('preview');
 
+  /* Keep floating toggle button above mobile browser UI (e.g. Chrome bottom address bar) */
+  function updateViewportOffset() {
+    if (!window.visualViewport) return;
+    const vv = window.visualViewport;
+    const offset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+    document.documentElement.style.setProperty('--mdv-vvb-offset', offset + 'px');
+  }
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', updateViewportOffset);
+    window.visualViewport.addEventListener('scroll', updateViewportOffset);
+    updateViewportOffset();
+  }
+
   function applyStatLabels() {
     const mobile = isMobileView();
     document.querySelectorAll('.mdv-stat-label').forEach(el => {
@@ -1231,6 +1244,12 @@ A bonus quick-reference for regular expressions, useful with this editor's Find 
     document.documentElement.setAttribute('data-theme', theme);
     if (drawerThemeLabel) drawerThemeLabel.textContent = theme === 'dark' ? 'Dark' : 'Light';
     localStorage.setItem(LS_THEME, theme);
+    const hljsTheme = document.getElementById('hljsTheme');
+    if (hljsTheme) {
+      hljsTheme.href = theme === 'dark'
+        ? 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css'
+        : 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css';
+    }
     if (window.mermaid) { mermaidReady = false; render(); }
   }
   function toggleTheme() {
@@ -1400,6 +1419,8 @@ A bonus quick-reference for regular expressions, useful with this editor's Find 
 
   editor.setSelectionRange(s, e);
 
+  // Luôn tính thủ công vì markEl nằm trong lớp overlay riêng,
+  // không phải con thật của <textarea> nên scrollIntoView không hoạt động.
   const lineHeight = parseInt(getComputedStyle(editor).lineHeight) || 21;
   const linesBefore = text.substring(0, s).split('\n').length;
   const visibleLines = Math.floor(editor.clientHeight / lineHeight);
@@ -1646,7 +1667,7 @@ img{max-width:100%;border-radius:8px;}
   /* ================= Mobile: tap-to-copy code / tap-to-open link codespans ================= */
   preview.addEventListener('click', (e) => {
     if (!isMobileView()) return;
-    if (e.target.closest('[data-copy]')) return;
+    if (e.target.closest('[data-copy]')) return; // handled above
 
     const urlCode = e.target.closest('.mdv-code-url');
     if (urlCode) {
