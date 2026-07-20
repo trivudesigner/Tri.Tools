@@ -609,7 +609,7 @@ html, body { height: 100%; }
    Follows Tri.UI v5 token system. Section per Architecture.md §13.
    ========================================================= */
 
-.mdv-shell { display: flex; flex-direction: column; height: 100vh; overflow: hidden; background: var(--tri-bg); }
+.mdv-shell { display: flex; flex-direction: column; height: 100vh; height: 100svh; overflow: hidden; background: var(--tri-bg); }
 
 /* ---- Topbar (combined with tabbar) ---- */
 .mdv-topbar {
